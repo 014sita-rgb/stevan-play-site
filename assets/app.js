@@ -2,10 +2,10 @@ const downloadBtn=document.getElementById('downloadBtn');
 const downloadStatus=document.getElementById('downloadStatus');
 async function checkMainApk(){
   try{
-    const r=await fetch('STEVAN_Play.apk',{method:'HEAD',cache:'no-store'});
+    const r=await fetch('playstevan.apk',{method:'HEAD',cache:'no-store'});
     if(r.ok){
       downloadBtn.classList.remove('disabled');
-      downloadBtn.setAttribute('href','STEVAN_Play.apk');
+      downloadBtn.setAttribute('href','playstevan.apk');
       downloadBtn.setAttribute('download','STEVAN_Play.apk');
       downloadBtn.removeAttribute('aria-disabled');
       downloadStatus.textContent='STEVAN Play APK je spreman za preuzimanje.';
@@ -15,7 +15,7 @@ async function checkMainApk(){
     downloadBtn.classList.add('disabled');
     downloadBtn.removeAttribute('href');
     downloadBtn.setAttribute('aria-disabled','true');
-    downloadStatus.textContent='STEVAN Play APK još nije postavljen na ovaj sajt. Sajt i katalog su spremni; potrebno je samo dodati STEVAN_Play.apk u glavni folder repozitorijuma.';
+    downloadStatus.textContent='STEVAN Play APK još nije postavljen na ovaj sajt.';
     downloadStatus.className='status warn';
   }
 }
