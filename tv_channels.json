@@ -49,6 +49,15 @@
       "note": "Званични live преко RTS Planeta; тренутно искључен из mobile режима ако тражи налог."
     },
     {
+      "id": "rts3",
+      "name": "РТС 3",
+      "url": "https://rtsplaneta.rs/sr_lat/live/tv",
+      "enabled": false,
+      "officialLive": true,
+      "practicalVerified": false,
+      "note": "Званични RTS Planeta извор; тренутно искључен из mobile режима ако тражи пријаву."
+    },
+    {
       "id": "rtssvet",
       "name": "РТС Свет",
       "url": "https://rtsplaneta.rs/sr_lat/live/tv/16889/rts-svet",
