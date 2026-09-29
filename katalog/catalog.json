@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 3,
+  "catalogVersion": 4,
   "updated": "2026-09-29",
   "apps": [
     {
@@ -27,34 +27,6 @@
       "versionCode": 9,
       "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/Majstori%20Lajkovac.apk",
       "sha256": "15d5333551911ba7b133105e66cfdfe8aad38001632572da86274c16db7ca6e2",
-      "access": "public",
-      "enabled": true
-    },
-    {
-      "id": "safestepai",
-      "name": "SafeStepAI",
-      "platform": "android",
-      "category": "OSI",
-      "description": "Kamera prepreke i pešačka navigacija za slepe i slabovide. APK će biti dodat kada dostavimo pravi fajl za objavu.",
-      "packageName": "",
-      "versionName": "",
-      "versionCode": 0,
-      "apkUrl": "",
-      "sha256": "",
-      "access": "public",
-      "enabled": true
-    },
-    {
-      "id": "valjevo-explorer",
-      "name": "Valjevo Explorer",
-      "platform": "android",
-      "category": "Turizam",
-      "description": "Glasovni turistički vodič kroz Valjevo i okolinu. APK će biti dodat kada dostavimo pravi fajl za objavu.",
-      "packageName": "rs.valjevoexplorer",
-      "versionName": "",
-      "versionCode": 0,
-      "apkUrl": "",
-      "sha256": "",
       "access": "public",
       "enabled": true
     }
