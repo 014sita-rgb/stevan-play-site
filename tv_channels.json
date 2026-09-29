@@ -1,97 +1,26 @@
 {
-  "schema": 1,
-  "updated": "2026-09-28",
-  "policy": "official_public_no_login",
+  "schema": 2,
+  "updated": "2026-09-29",
+  "policy": "official_or_public_legal_sources_only",
   "channels": [
-    {
-      "id": "b92",
-      "name": "Б92",
-      "url": "https://b92.tv/",
-      "enabled": true,
-      "officialLive": true,
-      "practicalVerified": true,
-      "note": "Званични B92.TV јавни плејер. Практично потврђено на корисниковом телефону 28.09.2026."
-    },
-    {
-      "id": "rtv1",
-      "name": "РТВ 1",
-      "url": "https://www.rtv.rs/program/prvi-program/",
-      "enabled": true,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званична страница РТВ Војводина са ознаком 'Гледајте ТВ 1 уживо'. Потребна практична провера у STEVAN WebView-у."
-    },
-    {
-      "id": "rtv2",
-      "name": "РТВ 2",
-      "url": "https://www.rtv.rs/sr_ci/program/drugi-program/",
-      "enabled": true,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званична страница РТВ Војводина са ознаком 'Гледајте ТВ2 уживо'. Потребна практична провера у STEVAN WebView-у."
-    },
-    {
-      "id": "rts1",
-      "name": "РТС 1",
-      "url": "https://rtsplaneta.rs/sr_lat/live/tv/5/rts-1",
-      "enabled": false,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званични live постоји преко RTS Planeta, али приступ може тражити кориснички налог; по STEVAN правилу се не отвара аутоматски."
-    },
-    {
-      "id": "rts2",
-      "name": "РТС 2",
-      "url": "https://rtsplaneta.rs/sr_lat/live/tv/4/rts-2",
-      "enabled": false,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званични live преко RTS Planeta; тренутно искључен из mobile режима ако тражи налог."
-    },
-    {
-      "id": "rts3",
-      "name": "РТС 3",
-      "url": "https://rtsplaneta.rs/sr_lat/live/tv",
-      "enabled": false,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званични RTS Planeta извор; тренутно искључен из mobile режима ако тражи пријаву."
-    },
-    {
-      "id": "rtssvet",
-      "name": "РТС Свет",
-      "url": "https://rtsplaneta.rs/sr_lat/live/tv/16889/rts-svet",
-      "enabled": false,
-      "officialLive": true,
-      "practicalVerified": false,
-      "note": "Званични RTS Planeta извор; mobile режим га не отвара ако тражи пријаву."
-    },
-    {
-      "id": "prva",
-      "name": "Прва",
-      "url": "https://www.prva.rs/",
-      "enabled": false,
-      "officialLive": false,
-      "practicalVerified": false,
-      "note": "Није потврђен јавни 24/7 live без налога."
-    },
-    {
-      "id": "pink",
-      "name": "Пинк",
-      "url": "https://www.pink.rs/tv",
-      "enabled": false,
-      "officialLive": false,
-      "practicalVerified": false,
-      "note": "Није потврђен јавни 24/7 live без налога."
-    },
-    {
-      "id": "happy",
-      "name": "Happy",
-      "url": "https://happytv.rs/",
-      "enabled": false,
-      "officialLive": false,
-      "practicalVerified": false,
-      "note": "Није потврђен јавни 24/7 live без налога."
-    }
+    {"id":"b92","name":"Б92","url":"https://b92.tv/","enabled":true,"officialLive":true,"practicalVerified":true,"mode":"embedded","provider":"B92","rightsStatus":"official_public","note":"Јавни B92.TV плејер; практично потврђен на корисниковом телефону."},
+    {"id":"rtv1","name":"РТВ 1","url":"https://www.rtv.rs/uzivo","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"РТВ Војводина","rightsStatus":"official_public","note":"Јавна RTV страница Програм уживо; отвара се у browser-у због поузданијег видео плејера."},
+    {"id":"rtv2","name":"РТВ 2","url":"https://www.rtv.rs/uzivo","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"РТВ Војводина","rightsStatus":"official_public","note":"Јавна RTV страница Програм уживо; отвара се у browser-у због поузданијег видео плејера."},
+    {"id":"euronews","name":"Euronews","url":"https://www.euronews.rs/tv-uzivo","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"Euronews Srbija","rightsStatus":"official_public","note":"Euronews Srbija TV уживо; јавни web player."},
+    {"id":"kurir","name":"Курир ТВ","url":"https://www.kurir.rs/tv","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"Kurir TV","rightsStatus":"official_public","note":"Kurir TV јавна TV уживо страница."},
+    {"id":"idj","name":"IDJTV","url":"https://idjtv.com/tv-stream/","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"IDJTV","rightsStatus":"official_public","note":"IDJTV јавна TV Stream страница."},
+    {"id":"kitchen","name":"Kitchen TV","url":"https://kitchentvgo.com/","enabled":true,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"Kitchen TV GO","rightsStatus":"official_public","note":"Kitchen TV GO наводи live TV на својој streaming платформи."},
+    {"id":"teleboks","name":"TeleBoks","url":"https://play.google.com/store/apps/details?id=rs.maketv.minacordiptv","enabled":true,"officialLive":false,"practicalVerified":false,"mode":"app","packageName":"rs.maketv.minacordiptv","provider":"Minacord Media","rightsStatus":"public_legal","note":"Бесплатни legal TV агрегатор за Tanjug TV, K1, TV DR и Kazbuka; STEVAN само покреће provider app."},
+    {"id":"tanjug","name":"Tanjug TV","url":"https://play.google.com/store/apps/details?id=rs.maketv.minacordiptv","enabled":true,"officialLive":false,"practicalVerified":false,"mode":"app","packageName":"rs.maketv.minacordiptv","provider":"TeleBoks / Minacord Media","rightsStatus":"public_legal","note":"Tanjug TV је доступан уживо преко бесплатне TeleBoks апликације."},
+    {"id":"k1","name":"K1","url":"https://play.google.com/store/apps/details?id=rs.maketv.minacordiptv","enabled":true,"officialLive":false,"practicalVerified":false,"mode":"app","packageName":"rs.maketv.minacordiptv","provider":"TeleBoks / Minacord Media","rightsStatus":"public_legal","note":"K1 упућује мобилне гледаоце на бесплатни TeleBoks."},
+    {"id":"tvdr","name":"TV DR","url":"https://play.google.com/store/apps/details?id=rs.maketv.minacordiptv","enabled":true,"officialLive":false,"practicalVerified":false,"mode":"app","packageName":"rs.maketv.minacordiptv","provider":"TeleBoks / Minacord Media","rightsStatus":"public_legal","note":"TV DR је доступан уживо преко бесплатне TeleBoks апликације."},
+    {"id":"kazbuka","name":"Kazbuka","url":"https://play.google.com/store/apps/details?id=rs.maketv.minacordiptv","enabled":true,"officialLive":false,"practicalVerified":false,"mode":"app","packageName":"rs.maketv.minacordiptv","provider":"TeleBoks / Minacord Media","rightsStatus":"public_legal","note":"Kazbuka је доступна уживо преко бесплатне TeleBoks апликације."},
+    {"id":"rts1","name":"РТС 1","url":"https://rtsplaneta.rs/sr_lat/live/tv/5/rts-1","enabled":false,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"RTS Planeta","rightsStatus":"official_public","note":"Бесплатан у Србији преко RTS Planeta, али може тражити кориснички налог; не отвара се аутоматски."},
+    {"id":"rts2","name":"РТС 2","url":"https://rtsplaneta.rs/sr_lat/live/tv/4/rts-2","enabled":false,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"RTS Planeta","rightsStatus":"official_public","note":"RTS Planeta live може тражити налог; не отвара се аутоматски."},
+    {"id":"rts3","name":"РТС 3","url":"https://rtsplaneta.rs/sr_lat/live/tv","enabled":false,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"RTS Planeta","rightsStatus":"official_public","note":"RTS Planeta live може тражити налог; не отвара се аутоматски."},
+    {"id":"rtssvet","name":"РТС Свет","url":"https://rtsplaneta.rs/sr_lat/live/tv/16889/rts-svet","enabled":false,"officialLive":true,"practicalVerified":false,"mode":"browser","provider":"RTS Planeta","rightsStatus":"official_public","note":"RTS Planeta извор; не отвара се аутоматски ако захтева пријаву."},
+    {"id":"prva","name":"Прва","url":"https://www.prva.rs/","enabled":false,"officialLive":false,"practicalVerified":false,"mode":"browser","provider":"Прва","rightsStatus":"unknown","note":"Још нема потврђеног јавног live-а без налога који можемо безбедно аутоматски отворити."},
+    {"id":"pink","name":"Пинк","url":"https://www.pink.rs/tv","enabled":false,"officialLive":false,"practicalVerified":false,"mode":"browser","provider":"Pink","rightsStatus":"unknown","note":"Још нема потврђеног јавног live-а без налога који можемо безбедно аутоматски отворити."},
+    {"id":"happy","name":"Happy","url":"https://happytv.rs/","enabled":false,"officialLive":false,"practicalVerified":false,"mode":"browser","provider":"Happy","rightsStatus":"unknown","note":"Још нема потврђеног јавног live-а без налога који можемо безбедно аутоматски отворити."}
   ]
 }
