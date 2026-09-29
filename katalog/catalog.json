@@ -1,6 +1,6 @@
 {
-  "catalogVersion": 2,
-  "updated": "2026-09-28",
+  "catalogVersion": 3,
+  "updated": "2026-09-29",
   "apps": [
     {
       "id": "imperijal-014",
@@ -13,6 +13,20 @@
       "versionCode": 12,
       "apkUrl": "asset://apks/imperijal-014_12.apk",
       "sha256": "fb0d26de1f90af62c2647f0693c32c1859c3a0640ea57302497122f1cf53a0cf",
+      "access": "public",
+      "enabled": true
+    },
+    {
+      "id": "majstori-lajkovac",
+      "name": "Majstori Lajkovac",
+      "platform": "android",
+      "category": "Usluge",
+      "description": "Majstori i usluge u Lajkovcu.",
+      "packageName": "rs.lajkovac.majstori",
+      "versionName": "1.3.1",
+      "versionCode": 9,
+      "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/Majstori%20Lajkovac.apk",
+      "sha256": "15d5333551911ba7b133105e66cfdfe8aad38001632572da86274c16db7ca6e2",
       "access": "public",
       "enabled": true
     },
