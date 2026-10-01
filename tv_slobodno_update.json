@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "appId": "rs.stevan.tvslobodno",
-  "versionCode": 9,
-  "versionName": "0.7.0",
+  "versionCode": 10,
+  "versionName": "0.7.1",
   "published": "2026-10-01",
   "downloadUrl": "https://014sita-rgb.github.io/stevan-play-site/",
-  "notes": "Stabilizaciona verzija: pravna zaštita i privatnost, automatska provera nove verzije, rezervna kopija poslednjih uspešnih lista kanala, poboljšana otpornost pri padu izvora i release zaštita koda."
+  "notes": "MULTI-ROUTE verzija: svaki vidljivi kanal mora imati najmanje dve rute (dodatni stream i/ili web fallback). Rezervne rute se dopunjuju preko javnog tv_slobodno_fallbacks.json registra bez nove APK verzije; zadržani su pravna zaštita, cache lista, HLS/RTSP/Web fallback i provera ažuriranja."
 }
