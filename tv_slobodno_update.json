@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "appId": "rs.stevan.tvslobodno",
-  "versionCode": 12,
-  "versionName": "0.7.3",
+  "versionCode": 13,
+  "versionName": "0.7.4",
   "published": "2026-10-02",
   "downloadUrl": "https://014sita-rgb.github.io/stevan-play-site/",
-  "notes": "WEB STABLE verzija: ispravljen povratak sa ručno izabranog kanala na prvobitni kanal na GledajTVUzivo i sličnim SAFE WEB izvorima. Automatski izbor kanala radi samo jednom i samo na listing stranici; korisnički klik ima prioritet, a spor iframe/video dobija dodatno vreme za učitavanje bez prisilnog vraćanja."
+  "notes": "STABILITY verzija: SAFE WEB watchdog i HTTP/network fallback, ručni izbor kanala na GledajTVUzivo ostaje pod korisničkom kontrolom, brza osvežavanja više ne mešaju stare rezultate, stari ExoPlayer callback-i ne utiču na novi izvor, update provera je otpornija, a generički TV direktorijum se više ne računa automatski kao druga ruta za novi kanal — potreban je kanal-specifičan SAFE WEB fallback."
 }
