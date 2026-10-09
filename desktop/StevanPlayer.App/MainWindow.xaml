@@ -1,0 +1,134 @@
+<Window x:Class="StevanPlayer.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+        Title="СТЕВАНplejer" Icon="Assets/stevan.ico" Width="1240" Height="800" MinWidth="800" MinHeight="530"
+        WindowStartupLocation="CenterScreen" AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver"
+        PreviewKeyDown="Window_KeyDown" MouseMove="Window_MouseMove" Closing="Window_Closing">
+  <Window.Resources>
+    <Style x:Key="TrackContextMenuStyle" TargetType="ContextMenu">
+      <Setter Property="Background" Value="#151D2C" /><Setter Property="Foreground" Value="#F0F4FC" />
+      <Setter Property="BorderBrush" Value="#3B4B65" /><Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="TrackMenuItemStyle" TargetType="MenuItem">
+      <Setter Property="Foreground" Value="#F0F4FC" /><Setter Property="Background" Value="#263348" />
+      <Setter Property="Padding" Value="8,6" />
+      <Style.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter Property="Background" Value="#354963" /><Setter Property="Foreground" Value="White" /></Trigger></Style.Triggers>
+    </Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+    <Border x:Name="Header" Background="{StaticResource PanelBrush}" BorderBrush="#2C3B52" BorderThickness="0,0,0,1" Padding="18,14">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button Content="＋ Отвори видео" Style="{StaticResource AccentButton}" Click="OpenFile_Click" ToolTip="Ctrl+O — више филмова или епизода" />
+          <Button Content="URL" Click="OpenUrl_Click" ToolTip="Отвори директну HTTP/HTTPS видео адресу" />
+          <Button Content="Подешавања" Click="Settings_Click" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Border Background="#187E73" Width="35" Height="35" CornerRadius="11" Margin="0,0,11,0"><TextBlock Text="▶" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+          <StackPanel><TextBlock Text="СТЕВАНplejer" FontSize="20" FontWeight="SemiBold" /><TextBlock Text="Филмови и серије · титлови на вашем језику" Foreground="{StaticResource MutedBrush}" FontSize="11" /></StackPanel>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition x:Name="SidebarColumn" Width="318" /></Grid.ColumnDefinitions>
+      <Border Background="Black" Margin="0,0,1,0">
+        <vlc:VideoView x:Name="Video" PreviewKeyDown="Window_KeyDown">
+          <Grid x:Name="VideoOverlay" Background="Transparent" Focusable="True" MouseMove="Window_MouseMove" PreviewKeyDown="Window_KeyDown" MouseDown="VideoOverlay_MouseDown" AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver">
+            <Border x:Name="Welcome" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#E6101827" CornerRadius="20" Padding="36" MaxWidth="530">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="▶" Foreground="{StaticResource AccentBrush}" FontSize="56" HorizontalAlignment="Center" Margin="0,0,0,12" />
+                <TextBlock Text="Ваш следећи филм почиње овде." FontSize="23" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
+                <TextBlock Text="Отворите видео или превуците филм и епизоде у овај прозор. Локални титл се учитава одмах; повезане базе се претражују аутоматски." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,14,0,22" />
+                <Button Content="Изабери видео" Click="OpenFile_Click" Style="{StaticResource AccentButton}" HorizontalAlignment="Center" />
+                <TextBlock Text="Space: пауза · ← →: 10 секунди · F11: цео екран" Foreground="{StaticResource MutedBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,18,0,0" />
+              </StackPanel>
+            </Border>
+            <Border x:Name="VideoBanner" Background="#C8151D2C" CornerRadius="6" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="10,6" Margin="12" Visibility="Collapsed" MaxWidth="600">
+              <TextBlock x:Name="VideoBannerText" TextWrapping="Wrap" />
+            </Border>
+            <Button x:Name="ExitFullscreenButton" Content="Изађи из целог екрана · Esc" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Visibility="Collapsed" Click="Fullscreen_Click" />
+          </Grid>
+        </vlc:VideoView>
+      </Border>
+      <Border x:Name="Sidebar" Grid.Column="1" Background="{StaticResource PanelBrush}" Padding="15" BorderBrush="#2C3B52" BorderThickness="1,0,0,0">
+        <Grid>
+          <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="ТИТЛОВИ" FontSize="12" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,0,0,10" />
+            <ComboBox x:Name="LanguageBox" SelectionChanged="Language_Changed" ToolTip="Жељени језик титла">
+              <ComboBoxItem Content="Српски" Tag="sr" /><ComboBoxItem Content="Хрватски" Tag="hr" /><ComboBoxItem Content="Босански" Tag="bs" />
+            </ComboBox>
+            <Grid Margin="0,10,0,10"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+              <Button x:Name="SearchButton" Content="Претражи" Click="Search_Click" IsEnabled="False" Padding="8" />
+              <Button Grid.Column="1" x:Name="LocalSubtitleButton" Content="Локални титл" Click="Subtitle_Click" IsEnabled="False" Padding="8" Margin="0" />
+            </Grid>
+            <TextBlock x:Name="SubtitleLabel" Text="Титл још није учитан." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,9" />
+            <Button x:Name="SyncButton" Content="Аутоматски усклади" Click="Synchronize_Click" IsEnabled="False" FontSize="12" Margin="0,0,0,8" ToolTip="AI препознавање говора одређује временски помак и промену брзине титла; потребна је сагласност и OpenAI кључ." />
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+              <Button Content="− 0,1 s" Click="OffsetMinus_Click" Padding="8,5" ToolTip="G — приказ титла раније" />
+              <TextBlock x:Name="OffsetLabel" Grid.Column="1" Text="0,0 s" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Позитивно кашњење: титл се приказује касније" />
+              <Button Grid.Column="2" Content="＋ 0,1 s" Click="OffsetPlus_Click" Padding="8,5" Margin="0" ToolTip="H — приказ титла касније" />
+            </Grid>
+            <TextBlock Text="Подударност са видео датотеком има предност. За друга издања подесите кашњење." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="11" Margin="0,9,0,10" />
+          </StackPanel>
+          <TabControl Grid.Row="1" Background="#101827" BorderBrush="#2C3B52">
+            <TabItem Header="Резултати">
+              <Grid Margin="5"><Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <ListBox x:Name="ResultsList" SelectionChanged="Results_SelectionChanged" MouseDoubleClick="Result_DoubleClick" BorderThickness="0">
+                  <ListBox.ItemTemplate><DataTemplate><StackPanel>
+                    <TextBlock Text="{Binding Release}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0"><Run Text="{Binding ProviderId}" /><Run Text=" · " /><Run Text="{Binding Language}" /></TextBlock>
+                    <TextBlock Text="{Binding HashMatched, StringFormat=Подударност датотеке: {0}}" Foreground="{StaticResource AccentBrush}" FontSize="10" Margin="0,3,0,0" />
+                  </StackPanel></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <Button x:Name="DownloadButton" Grid.Row="1" Content="Преузми и укључи изабрани титл" Click="Download_Click" IsEnabled="False" Margin="0,8,0,0" FontSize="12" Padding="6,9" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Листа">
+              <ListBox x:Name="PlaylistList" MouseDoubleClick="Playlist_DoubleClick" BorderThickness="0" Margin="5">
+                <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="Wrap" /></DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+            </TabItem>
+          </TabControl>
+          <StackPanel Grid.Row="2" Margin="0,13,0,0">
+            <Button x:Name="GenerateButton" Content="Препознај говор и преведи" Click="Generate_Click" IsEnabled="False" Margin="0" FontSize="12" />
+            <TextBlock Text="AI обрада шаље звук у облак само уз вашу сагласност у подешавањима; могућа је наплата API услуге." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="10" Margin="0,6,0,9" />
+            <TextBlock Text="Додатни извори (отворите у прегледачу):" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+            <WrapPanel Margin="0,6,0,0"><Button Content="Titlovi.com" Tag="https://titlovi.com/" Click="Source_Click" FontSize="10" Padding="6,5" /><Button Content="Prijevodi" Tag="https://prijevodi-titlovi.org/" Click="Source_Click" FontSize="10" Padding="6,5" /><Button Content="Online" Tag="https://www.prijevodi-online.org/" Click="Source_Click" ToolTip="Prijevodi Online — ручни приступ у прегледачу; дозвољени API још није проверен." FontSize="10" Padding="6,5" Margin="0" /></WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+    <Border x:Name="Footer" Grid.Row="2" Background="{StaticResource PanelBrush}" BorderBrush="#2C3B52" BorderThickness="0,1,0,0" Padding="16,10">
+      <StackPanel>
+        <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="70" /><ColumnDefinition /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+          <TextBlock x:Name="PositionLabel" Text="00:00" VerticalAlignment="Center" />
+          <Slider x:Name="SeekSlider" Grid.Column="1" Minimum="0" Maximum="1000" Value="0" IsEnabled="False" ValueChanged="Seek_ValueChanged" PreviewMouseLeftButtonDown="Seek_MouseDown" PreviewMouseLeftButtonUp="Seek_MouseUp" LostMouseCapture="Seek_LostCapture" IsMoveToPointEnabled="True" />
+          <TextBlock x:Name="DurationLabel" Grid.Column="2" Text="00:00" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Button x:Name="MuteButton" Content="Звук" Click="Mute_Click" ToolTip="M — искључи/укључи звук" Padding="9,7" />
+            <Slider x:Name="VolumeSlider" Width="85" Minimum="0" Maximum="100" Value="75" ValueChanged="Volume_Changed" ToolTip="Јачина звука" Margin="0,0,14,0" />
+            <Button Content="⛶ Цео екран" Click="Fullscreen_Click" ToolTip="F11 · Esc" Margin="0" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <Button Content="◀ 10 s" Click="Back_Click" ToolTip="←" Padding="10,7" />
+            <Button x:Name="PlayButton" Content="▶ Пусти" Click="Play_Click" Padding="16,7" Style="{StaticResource AccentButton}" IsEnabled="False" ToolTip="Space" />
+            <Button x:Name="StopButton" Content="■" Click="Stop_Click" Padding="13,7" IsEnabled="False" ToolTip="Заустави" />
+            <Button Content="10 s ▶" Click="Forward_Click" ToolTip="→" Padding="10,7" />
+            <Button Content="Следећа ⏭" Click="Next_Click" Padding="10,7" />
+          </StackPanel>
+        </DockPanel>
+        <Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <Button x:Name="AudioTrackButton" Content="Аудио ▾" Click="AudioTrack_Click" IsEnabled="False" FontSize="11" Padding="7,3" ToolTip="Изабери звучни запис или искључи звук" />
+          <Button x:Name="SubtitleTrackButton" Grid.Column="1" Content="Титл ▾" Click="SubtitleTrack_Click" IsEnabled="False" FontSize="11" Padding="7,3" ToolTip="Изабери уграђени/спољни титл или искључи титлове" />
+          <TextBlock x:Name="StatusText" Grid.Column="2" Text="Спреман. Отворите филм или серију." Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" FontSize="11" VerticalAlignment="Center" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+          <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center"><ProgressBar x:Name="Busy" Width="64" Height="5" IsIndeterminate="True" Visibility="Collapsed" Margin="0,3,8,0" /><Button x:Name="CancelButton" Content="Откажи" Click="Cancel_Click" Visibility="Collapsed" FontSize="10" Padding="5,0" /><TextBlock x:Name="MediaName" Text="" Foreground="{StaticResource MutedBrush}" FontSize="11" MaxWidth="220" TextTrimming="CharacterEllipsis" /></StackPanel>
+        </Grid>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

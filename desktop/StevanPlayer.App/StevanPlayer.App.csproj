@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <AssemblyName>STEVANplejer</AssemblyName>
+    <RootNamespace>StevanPlayer.App</RootNamespace>
+    <ApplicationIcon>Assets/stevan.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>СТЕВАНplejer</Product>
+    <Description>Windows видео плејер са титловима на српском, хрватском и босанском.</Description>
+    <Version>1.0.0</Version>
+    <Authors>СТЕВАНplejer</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../StevanPlayer.Core/StevanPlayer.Core.csproj" />
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.10.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
+    <Resource Include="Assets/stevan.ico" />
+  </ItemGroup>
+</Project>
