@@ -40,7 +40,7 @@
               <StackPanel HorizontalAlignment="Center">
                 <TextBlock Text="▶" Foreground="{StaticResource AccentBrush}" FontSize="56" HorizontalAlignment="Center" Margin="0,0,0,12" />
                 <TextBlock Text="Ваш следећи филм почиње овде." FontSize="23" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
-                <TextBlock Text="Отворите видео или превуците филм и епизоде у овај прозор. Локални титл се учитава одмах; повезане базе се претражују аутоматски." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,14,0,22" />
+                <TextBlock Text="Отворите филм. Плејер ће пронаћи доступне преводе — само означите један на списку и гледајте." TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,14,0,22" />
                 <Button Content="Изабери видео" Click="OpenFile_Click" Style="{StaticResource AccentButton}" HorizontalAlignment="Center" />
                 <TextBlock Text="Space: пауза · ← →: 10 секунди · F11: цео екран" Foreground="{StaticResource MutedBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,18,0,0" />
               </StackPanel>
@@ -65,7 +65,7 @@
               <Button Grid.Column="1" x:Name="LocalSubtitleButton" Content="Локални титл" Click="Subtitle_Click" IsEnabled="False" Padding="8" Margin="0" />
             </Grid>
             <TextBlock x:Name="SubtitleLabel" Text="Титл још није учитан." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,9" />
-            <Button x:Name="SyncButton" Content="Аутоматски усклади" Click="Synchronize_Click" IsEnabled="False" FontSize="12" Margin="0,0,0,8" ToolTip="AI препознавање говора одређује временски помак и промену брзине титла; потребна је сагласност и OpenAI кључ." />
+            <Button x:Name="SyncButton" Content="Аутоматски усклади" Click="Synchronize_Click" IsEnabled="False" FontSize="12" Margin="0,0,0,8" ToolTip="Локално препознавање говора одређује временски помак и промену брзине титла; потребни су преузети локални модели." />
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
               <Button Content="− 0,1 s" Click="OffsetMinus_Click" Padding="8,5" ToolTip="G — приказ титла раније" />
               <TextBlock x:Name="OffsetLabel" Grid.Column="1" Text="0,0 s" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Позитивно кашњење: титл се приказује касније" />
@@ -76,14 +76,15 @@
           <TabControl Grid.Row="1" Background="#101827" BorderBrush="#2C3B52">
             <TabItem Header="Резултати">
               <Grid Margin="5"><Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                <ListBox x:Name="ResultsList" SelectionChanged="Results_SelectionChanged" MouseDoubleClick="Result_DoubleClick" BorderThickness="0">
+                <ListBox x:Name="ResultsList" SelectionChanged="Results_SelectionChanged" BorderThickness="0" SelectionMode="Single">
                   <ListBox.ItemTemplate><DataTemplate><StackPanel>
+                    <CheckBox Content="Користи овај превод" IsChecked="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected, Mode=TwoWay}" Margin="0,0,0,5" />
                     <TextBlock Text="{Binding Release}" TextWrapping="Wrap" FontWeight="SemiBold" />
                     <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0"><Run Text="{Binding ProviderId}" /><Run Text=" · " /><Run Text="{Binding Language}" /></TextBlock>
                     <TextBlock Text="{Binding HashMatched, StringFormat=Подударност датотеке: {0}}" Foreground="{StaticResource AccentBrush}" FontSize="10" Margin="0,3,0,0" />
                   </StackPanel></DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
-                <Button x:Name="DownloadButton" Grid.Row="1" Content="Преузми и укључи изабрани титл" Click="Download_Click" IsEnabled="False" Margin="0,8,0,0" FontSize="12" Padding="6,9" />
+                <Button x:Name="DownloadButton" Grid.Row="1" Content="Поново учитај изабрани превод" Click="Download_Click" IsEnabled="False" Margin="0,8,0,0" FontSize="12" Padding="6,9" />
               </Grid>
             </TabItem>
             <TabItem Header="Листа">
@@ -94,9 +95,7 @@
           </TabControl>
           <StackPanel Grid.Row="2" Margin="0,13,0,0">
             <Button x:Name="GenerateButton" Content="Препознај говор и преведи" Click="Generate_Click" IsEnabled="False" Margin="0" FontSize="12" />
-            <TextBlock Text="AI обрада шаље звук у облак само уз вашу сагласност у подешавањима; могућа је наплата API услуге." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="10" Margin="0,6,0,9" />
-            <TextBlock Text="Додатни извори (отворите у прегледачу):" Foreground="{StaticResource MutedBrush}" FontSize="11" />
-            <WrapPanel Margin="0,6,0,0"><Button Content="Titlovi.com" Tag="https://titlovi.com/" Click="Source_Click" FontSize="10" Padding="6,5" /><Button Content="Prijevodi" Tag="https://prijevodi-titlovi.org/" Click="Source_Click" FontSize="10" Padding="6,5" /><Button Content="Online" Tag="https://www.prijevodi-online.org/" Click="Source_Click" ToolTip="Prijevodi Online — ручни приступ у прегледачу; дозвољени API још није проверен." FontSize="10" Padding="6,5" Margin="0" /></WrapPanel>
+            <TextBlock Text="Када нема готовог превода, препознавање и превод раде локално, без API кључева. Модели се преузимају једном у Подешавањима." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="10" Margin="0,6,0,0" />
           </StackPanel>
         </Grid>
       </Border>

@@ -1,0 +1,37 @@
+{
+  "Status": "PASSED",
+  "DateUtc": "2026-10-10T16:27:41.8646644+00:00",
+  "Scope": "Linux real anonymous search, chosen download, ZIP extraction and timed SRT parsing. Windows display and film alignment not exercised.",
+  "CharadeCandidateCount": 6,
+  "CharadeLanguages": [
+    "hr",
+    "sr"
+  ],
+  "CharadeSelectedDownloads": [
+    {
+      "Id": "219219",
+      "Language": "sr",
+      "Release": "720p.BRRip.H264.AC3.-.CODY",
+      "ArchiveBytes": 43128,
+      "CueCount": 1418,
+      "FirstCueSeconds": 238.819,
+      "LastCueSeconds": 6810.234,
+      "SerbianCroatianCharacters": true
+    },
+    {
+      "Id": "378610",
+      "Language": "hr",
+      "Release": "https://www.youtube.com/watch?v=-uc86VH8hdA\u0026t=26s",
+      "ArchiveBytes": 31736,
+      "CueCount": 887,
+      "FirstCueSeconds": 207.795,
+      "LastCueSeconds": 6780.43,
+      "SerbianCroatianCharacters": true
+    }
+  ],
+  "NightOfTheLivingDeadCandidateCount": 10,
+  "NightOfTheLivingDeadLanguages": [
+    "sr",
+    "hr"
+  ]
+}

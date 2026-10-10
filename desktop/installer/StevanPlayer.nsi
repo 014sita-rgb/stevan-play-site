@@ -51,6 +51,8 @@ ManifestDPIAware true
 !endif
 
 Var SelectedRuntime
+Var PrerequisitePowerShell
+Var PrerequisiteResult
 
 Name "СТЕВАНplejer"
 OutFile "${OUTFILE}"
@@ -101,9 +103,51 @@ Function .onInit
   !endif
 FunctionEnd
 
+Function EnsureNativeRuntime
+  ; Only x64 payloads run the local translator. x86 playback/subtitle selection
+  ; does not invoke the unsupported x86 LLama backend.
+  ${If} $SelectedRuntime != "win-x64"
+    Return
+  ${EndIf}
+  InitPluginsDir
+  SetOutPath "$PLUGINSDIR"
+  File "/oname=ensure-vc-runtime.ps1" "${__FILEDIR__}/ensure-vc-runtime.ps1"
+  ; NSIS is a 32-bit executable; Sysnative avoids WOW64 registry/DLL confusion.
+  StrCpy $PrerequisitePowerShell "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+  IfFileExists "$PrerequisitePowerShell" prerequisite_powershell_found 0
+  StrCpy $PrerequisitePowerShell "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+  IfFileExists "$PrerequisitePowerShell" prerequisite_powershell_found 0
+  MessageBox MB_ICONSTOP "Није пронађен Windows PowerShell за проверу Microsoft Visual C++ библиотека. Инсталација није завршена."
+  SetErrorLevel 1
+  Abort
+  prerequisite_powershell_found:
+  ; Pass the installer-owned helper path as data. Execute only the bundled local
+  ; source inline: no execution-policy changes or downloaded PowerShell scripts.
+  System::Call 'kernel32::SetEnvironmentVariable(t "STEVAN_INSTALL_PREREQUISITE", t "$PLUGINSDIR\ensure-vc-runtime.ps1") i .r0'
+  ${If} $0 == 0
+    MessageBox MB_ICONSTOP "Неуспешна припрема провере Microsoft Visual C++ библиотека. Инсталација није завршена."
+    SetErrorLevel 1
+    Abort
+  ${EndIf}
+  DetailPrint "Провера Microsoft Visual C++ x64 библиотека за локалне титлове..."
+  nsExec::ExecToLog '"$PrerequisitePowerShell" -NoProfile -NonInteractive -Command "& ([scriptblock]::Create([IO.File]::ReadAllText([Environment]::GetEnvironmentVariable($\'STEVAN_INSTALL_PREREQUISITE$\'))))"'
+  Pop $PrerequisiteResult
+  System::Call 'kernel32::SetEnvironmentVariable(t "STEVAN_INSTALL_PREREQUISITE", p 0) i .r0'
+  ${If} $PrerequisiteResult == 3010
+    SetRebootFlag true
+    DetailPrint "Microsoft библиотеке су инсталиране; поново покрените Windows пре употребе плејера."
+  ${ElseIf} $PrerequisiteResult != 0
+    MessageBox MB_ICONSTOP "Microsoft Visual C++ библиотеке нису успешно проверене или инсталиране. Погледајте детаље инсталације. Инсталација СТЕВАНplejera није завршена."
+    SetErrorLevel 1
+    Abort
+  ${EndIf}
+FunctionEnd
+
 Section "СТЕВАНplejer (обавезно)" MainSection
   SectionIn RO
   SetShellVarContext current
+  ; Complete the prerequisite before writing application files or uninstall keys.
+  Call EnsureNativeRuntime
   !ifdef UNIVERSAL
     ${If} $SelectedRuntime == "win-x64"
       !insertmacro InstallPayload_win_x64 "${PUBLISH_DIR_X64}"

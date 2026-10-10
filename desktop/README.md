@@ -1,153 +1,141 @@
-# СТЕВАНplejer за Windows
+# СТЕВАНplejer za Windows
 
-Изворни код самосталног плејера за Windows 10 x86/x64 и Windows 11 x64,
-заснованог на .NET/WPF и libVLC. Један универзални инсталер бира одговарајући
-runtime: кориснику нису потребни Python, PowerShell, .NET SDK нити засебан VLC.
-PowerShell се користи само за развојне/тест скрипте. Постојећи Android сајт је одвојен од
-овог пројекта. Развој је започет уз корисников приложени
-`STEVANplejer_Windows_Source.zip`.
+Plejer sam prepoznaje film ili epizodu, traži srpske, hrvatske i bosanske
+titlove i prikazuje spisak u svom prozoru. Jednim označavanjem biraš prevod:
+plejer ga preuzima, proverava i uključuje uz video. U podešavanjima nema API
+ključeva, naloga niti upućivanja na sajt radi ručnog traženja titla.
 
-**Статус: завршно издање није потврђено.** Linux компајлирање и тестови логике
-нису доказ Windows репродукције. `artifacts/*candidate*` су интерни резултати
-компајлирања за проверу, без јавне објаве или представљања као готов производ.
-Услови за завршетак и стварни резултати воде се у [VALIDATION.md](VALIDATION.md).
+**Završno izdanje još nije potvrđeno.** Dostupan je izvorni kod sa proverama;
+gotov Windows program neće biti objavljen dok stvarna reprodukcija,
+instalacija, prikaz titlova i lokalno prevođenje ne prođu prihvatne testove.
+Rezultati i preostale provere vode se u [VALIDATION.md](VALIDATION.md).
 
-## Архитектуре и Windows верзије
+## Kako radi izbor titla
 
-| Рачунар / ОС | Пакет који универзални инсталер бира |
+1. Otvoriš lokalni film ili direktnu HTTP(S) adresu video sadržaja.
+2. Plejer koristi naziv datoteke, godinu, sezonu/epizodu, dostupni naslov iz
+   metapodataka i, za lokalnu datoteku, hash. Sam pokreće pretragu.
+3. U spisku označiš jedan ponuđeni prevod. Plejer preuzima baš taj prevod i
+   bira njegov stvarni libVLC subtitle zapis. Drugi prevod biraš istim postupkom.
+
+Hash dopunjuje pretragu zasnovanu na poznatom nazivu/metapodacima. Ne
+prepoznaje samostalno nepoznat film iz proizvoljnog imena kao `video.mp4`.
+Skidanje oznake isključuje titl i otkazuje njegovo učitavanje ako još traje.
+
+Postoje i lokalni izvori: fascikla filma, Downloads i cache plejera. Lokalni
+titl mora odgovarati naslovu, godini/epizodi i jeziku. Preuzeti titlovi čuvaju
+se u `%LOCALAPPDATA%\StevanPlayer\Subtitles`; podešavanja su u istom
+korisničkom direktorijumu. Spisak nije dokaz da je titl vremenski usklađen
+sa svakim izdanjem filma. Dostupni su ručni pomak i lokalno usklađivanje.
+
+Podržani su SRT, VTT, ASS i ZIP sa proverom izabrane epizode/jezika. RAR
+trenutno nije podržan. Nejasan naziv filma ili serije može sprečiti pouzdano
+poklapanje; pretraga ne garantuje prevod za svaki naslov.
+
+## Izvori bez korisničkih ključeva
+
+| Izvor | Trenutna automatska podrška i dokaz |
 | --- | --- |
-| Windows 10 64-bit, Intel/AMD | `win-x64` |
-| Windows 10 32-bit, Intel/AMD | `win-x86` |
-| Windows 11 64-bit, Intel/AMD | `win-x64` |
-| Windows 11 32-bit | Не постоји такво издање Windows-а |
-| ARM64 Windows | Није покривен овим пакетом; инсталер га изричито одбија |
+| Titlovi.com | Javne stranice za pretragu, izabrani detalj i objavljeni download, uz ograničenje učestalosti i robots pravila. Stvarna provera za *Charade (1963)* dala je šest rezultata; izabrani srpski i hrvatski ZIP dali su ispravne vremenski označene SRT titlove. Prikaz uz film na Windows-u još nije potvrđen. |
+| OpenSubtitles | Javni zvanični Stremio OpenSubtitles v3 dodatak i Cinemeta za identifikaciju. Korisniku ne treba ključ. Protokol je testiran primerima; cloud CONNECT 403 sprečio je stvarnu mrežnu proveru tog puta. |
+| Prijevodi-Titlovi.org | Automatski dozvoljen put za traženje/preuzimanje nije potvrđen; relevantne putanje su ograničene robots pravilima i članstvom. |
+| Prijevodi Online | Potvrđena adresa je `https://www.prijevodi-online.org/`. Robots pravila izričito odbijaju ChatGPT-User/GPTBot; dozvoljen automatski API nije potvrđen. |
+| SubDL | Javni katalog može da se pročita, ali robots pravila zabranjuju relevantna preuzimanja, a zvanični API traži ključ. Automatsko preuzimanje bez ključa nije uključeno. |
 
-Ово су циљеви кода и паковања, не потврђени резултати репродукције.
-За обичан Windows 10 Home/Pro циљ прихватних тестова је ажуриран 22H2;
-његова редовна Microsoft подршка је завршена. .NET 10 званична OS матрица
-посебно наводи LTSC/Enterprise издања у животном циклусу. Нема гаранције за
-сваку стару Windows 10 верзију. x86 процес тестиран на Windows 11 x64
-није доказ рада на стварном Windows 10 32-bit ОС-у.
+Preostala tri izvora nisu predstavljena kao završene integracije. Plejer
+prijavljuje kvar ili ograničenje dostupnog izvora; ne zaobilazi prijavu,
+CAPTCHA, zabrane preuzimanja ili ograničenja servisa. OpenSubtitles put je
+opisan u [dokazima o javnom dodatku](StevanPlayer.Core/Providers/KEYLESS-OPENSUBTITLES-SOURCES.md).
+Starije klase za API servise ostaju u Core biblioteci i njenim testovima,
+ali ih sadašnja Windows aplikacija ne aktivira i ne učitava njihove ključeve.
 
-## Шта код омогућава
+## Kada prevod nije dostupan
 
-- Сопствени интерфејс и иконицу, отварање локалног видеа и директних HTTP(S)
-  видео/stream адреса, превлачење датотека и листу репродукције.
-- Репродукцију, паузу, заустављање, кретање по филму, јачину/утишавање звука,
-  пун екран, избор аудио/титл записа и ручни временски помак титла.
-- Претрагу/преузимање српских, хрватских и босанских титлова преко
-  OpenSubtitles, SubDL и Titlovi.com провајдера, уз потребан налог/кључ и
-  услове сервиса. Препознавање назива, године, серије/епизоде и hash-а филма;
-  провера локалног титла пре интернет претраге и чување преузетих титлова
-  у корисниковом cache-у. Мрежни одговори су тестирани синтетичким примерима;
-  успешан live download и тачност поклапања нису потврђени без налога и филма.
-- Када титл није нађен: локално издвајање звука, OpenAI препознавање говора
-  и превођење на изабрани језик. Иста обрада може проценити временски помак
-  и промену брзине постојећег титла. Обрада тражи API кључ, изричиту
-  сагласност за слање звука/текста и може направити трошак. Квалитет превода
-  и аутоматске синхронизације мора се проверити на стварном филму.
-- Windows DPAPI заштиту API кључева и лозинке везану за Windows корисника.
+Na x64 računaru plejer može lokalno izdvojiti zvuk, prepoznati govor pomoću
+Whisper small modela i prevesti vremenski označene replike pomoću Qwen3 4B
+Q4_K_M modela. Podešavanja nude jednokratno preuzimanje modela, približno
+3 GB. Preuzimanje koristi zvanične javne Hugging Face repozitorijume,
+određenu reviziju i proveru LFS SHA-256; fajlovi se ponovo proveravaju pre
+obrade. Posle toga obrada radi lokalno bez slanja zvuka/teksta na servis.
 
-Prijevodi-Titlovi.org тренутно има везу за ручно отварање у прегледачу и
-додавање преузетог титла: download путање су искључене у robots правилима,
-а сајт приказује преузимање само за чланове. Корисник је потврдио адресу
-[Prijevodi Online](https://www.prijevodi-online.org/), која је сада ручна веза
-у плејеру. Cloud proxy блокира проверу тог сајта пре приступа серверу;
-његова правила и дозвољени API нису проверени. То није доказ забране сајта.
-Потпуна аутоматизација оба извора остаје неиспуњен захтев.
-Нема заобилажења CAPTCHA, пријаве, DRM-а
-или ограничења сервиса. HTML адреса странице није директна видео адреса.
-Подржани су SRT/VTT/ASS и ZIP архиве; RAR-only титлови тренутно пријављују
-неподржан формат уместо лажног успеха.
+Potrebni su x64 proces i najmanje 8 GB RAM-a; preporučeno je 16 GB. Obrada
+na CPU-u može trajati duže od samog filma; generisani titl nije trenutni
+prevod tokom gledanja. Kada obrada završi, vrati film na početak da ga
+gledaš sa tim titlom. SRT ostaje u cache-u; automatsko prepoznavanje ranije
+generisanog cache fajla pri ponovnom otvaranju filma još nije rešeno.
+Kada je omogućena i modeli su preuzeti, lokalna
+obrada počinje ako automatska pretraga ne vrati titl. Dostupno je i lokalno
+usklađivanje izabranog titla. Trenutno se obrađuje lokalni video, ne mrežni
+stream. Kvalitet srpskog/hrvatskog/bosanskog prevoda i usklađivanja još nije
+potvrđen stvarnom obradom: cloud pristup modelima nije uspeo i modeli nisu
+ovde preuzeti. Rezultat se mora proveriti na početku, sredini i kraju filma.
 
-## Компајлирање и инсталација за проверу
+## Windows i arhitekture
 
-Развој тражи Windows x64, PowerShell 7, SDK верзију из `global.json`, Node.js
-22 или новији (само за припрему package-а), и NSIS 3.11 за инсталатер.
-Не мењајте lockfile ради успешног restore-а. Из корена репозиторијума:
+| Računar / OS | Cilj paketa | Lokalno prepoznavanje i prevod |
+| --- | --- | --- |
+| Windows 10 x64, Intel/AMD | `win-x64` | Predviđeno; stvarni testovi čekaju |
+| Windows 11 x64, Intel/AMD | `win-x64` | Predviđeno; stvarni testovi čekaju |
+| Windows 10 x86, Intel/AMD | `win-x86`, reprodukcija i pretraga titlova | Nije dostupno |
+| Windows 11 x86 | Takvo izdanje Windows-a ne postoji | — |
+| ARM64 Windows | Instalater odbija nepokrivenu arhitekturu | — |
+
+Univerzalni instalater bira odgovarajući x64/x86 paket. To još nije dokaz
+rada na svim ovim sistemima; x86 test pod WOW64 na Windows 11 x64 ne
+potvrđuje rad na Windows 10 32-bit. Glavni cilj sa svim funkcijama ostaje
+Windows 10/11 x64. Za običan Windows 10 Home/Pro cilj testiranja je ažuriran
+22H2; njegova redovna Microsoft podrška je završena. .NET 10 zvanična OS
+matrica posebno navodi podržana LTSC/Enterprise izdanja. Ne garantuje se
+rad na svakoj staroj Windows 10 verziji.
+
+## Interfejs i instalacija
+
+WPF interfejs ima sopstvenu ikonicu, listu reprodukcije, prevlačenje videa,
+reprodukciju/pauzu/stop, seek, jačinu i utišavanje zvuka, puni ekran,
+izbor audio/titl zapisa i vremenski pomak. Video i zvuk obrađuje libVLC.
+HTML stranica nije direktna adresa video stream-a.
+
+Paket sadrži .NET/WPF i libVLC; za rad aplikacije nisu potrebni Python,
+PowerShell 7, razvojni SDK, Node.js, FFmpeg ili zaseban VLC. x64 lokalni AI
+koristi Microsoft Visual C++ runtime 14.44 ili noviji. Ako odgovarajući
+runtime nedostaje, instalater preuzima zvanični Microsoft paket, proverava
+SHA-256 i Microsoft Authenticode potpis, pa pokreće njegovu instalaciju.
+Taj korak traži internet i može tražiti administratorsku UAC potvrdu ili
+restart. Pomoćna skripta koristi Windows-ov ugrađeni PowerShell; to nije
+zavisnost samog plejera.
+
+Plejer se instalira za trenutnog korisnika u
+`%LOCALAPPDATA%\Programs\StevanPlayer`, sa Start menu i opcionom Desktop
+prečicom. Deinstalacija uklanja poznate datoteke aplikacije, čuva korisnička
+podešavanja, modele, titlove i nepoznate datoteke i ne uklanja zajednički
+Visual C++ runtime. Instalater još nije Authenticode potpisan; potpisivanje
+i pripadajući izvori/licence su uslovi pre javne distribucije.
+
+## Izgradnja i stvarni testovi
+
+Razvoj traži SDK iz `global.json` (10.0.401), PowerShell 7, Node.js 22 ili
+noviji i NSIS 3.11. Iz korena repozitorijuma:
 
 ```powershell
 ./desktop/scripts/build.ps1 -BuildUniversalInstaller -MakeNsis 'C:\Program Files (x86)\NSIS\makensis.exe'
 ```
 
-Скрипта прво покреће тестове, затим self-contained publish за `win-x64` и
-`win-x86`, копира лиценце и генерише посебне манифесте власништва
-инсталатера. Не прави single-file пакет јер су native VLC библиотеке,
-plugin-и и лиценце неопходни поред `.exe` датотеке. Резултати су
-`desktop/artifacts/win-x64/`, `desktop/artifacts/win-x86/`, засебни интерни
-`*x64-candidate.zip` / `*x86-candidate.zip` и инсталери, те један
-`STEVANplejer-Windows-universal-candidate-setup.exe` са оба payload-а.
-За једну архитектуру: `build.ps1 -RuntimeIdentifier win-x86 -BuildInstaller`
-(подразумевана архитектура build скрипте је x64).
-Једна издвојена `.exe` датотека није цео плејер.
+Skripta koristi zaključane NuGet zavisnosti, pokreće Core testove i pravi
+self-contained `win-x64`/`win-x86` pakete, licence, manifest vlasništva i
+instalatere u `desktop/artifacts/`. Native biblioteke ostaju uz aplikaciju;
+jedan izdvojeni `STEVANplejer.exe` nije ceo paket. `*candidate*` datoteke su
+isključivo interni rezultati izgradnje, ne javno probno izdanje.
 
-NSIS инсталира за тренутног корисника у
-`%LOCALAPPDATA%\Programs\StevanPlayer`, без администратора, и додаје Start
-menu пречицу. Desktop пречица се бира током инсталације. Деинсталација
-брише само познате инсталиране датотеке и пречице; подешавања, заштићени
-кључеви и титлови у `%LOCALAPPDATA%\StevanPlayer` остају сачувани. Пакет још
-није Authenticode потписан; SmartScreen упозорење на непознатог издавача
-може се појавити. Потписивање за јавну дистрибуцију тражи сертификат издавача.
+Za Windows provere koristi [TEST-ON-YOUR-PC.md](TEST-ON-YOUR-PC.md) i
+`scripts/test-local-windows.ps1`. Native test proverava stvarno dekodiranje,
+odabran spoljašnji titl, pomak, pauzu/seek i izdvojeni PCM zvuk. WPF test
+otvara prozor, bira titl iz spiska u plejeru, proverava kontrole, puni ekran,
+promenu videa i čuva stvarne snimke radne površine. To ne zamenjuje proveru
+vidljivog teksta, zvučnika, pravog filma, internet izvora i kvaliteta prevoda.
+FFmpeg se koristi samo za sintetički test video i ne isporučuje se u plejeru.
 
-Cloud окружење користи постојећи checkout: сваки задатак је већ изолован,
-па додатни Git worktree није потребан без изричитог захтева. Linux може
-покренути core тестове и cross-publish, али не замењује Windows тестове.
-`scripts/setup-cloud.sh` припрема проверене pinned алате за тај workflow.
-
-## Стварни Windows тестови
-
-За проверу на свом рачунару користите [TEST-ON-YOUR-PC.md](TEST-ON-YOUR-PC.md)
-и `scripts/test-local-windows.ps1` из PowerShell-а 7. Та скрипта не шаље код
-и не покреће аутоматску деинсталацију на вашем корисничком налогу.
-На твом Windows 11 x64 може се проверити и x86 процес:
-`scripts/test-local-windows.ps1 -TestBothArchitectures`. Извештаји проверавају
-стварни `ProcessArchitecture`, не прихватају x64 резултат као x86 PASS.
-Коначна подршка за Windows 10 x86 захтева додатно тестирање на том ОС-у.
-
-FFmpeg се користи само за прављење синтетичког тест филма, не у инсталацији.
-
-```powershell
-./desktop/scripts/create-test-fixture.ps1
-./desktop/scripts/test-windows.ps1 `
-  -MediaPath desktop/artifacts/test-fixture/Stevan.Validation.2026.mp4 `
-  -SubtitlePath desktop/artifacts/test-fixture/Stevan.Validation.2026.sr.srt
-./desktop/scripts/test-windows.ps1 -Mode Ui `
-  -MediaPath desktop/artifacts/test-fixture/Stevan.Validation.2026.mp4 `
-  -SubtitlePath desktop/artifacts/test-fixture/Stevan.Validation.2026.sr.srt `
-  -ReportPath desktop/artifacts/test-results/windows-wpf-controls.json
-./desktop/scripts/create-test-fixture.ps1 -DurationSeconds 610 -FrameRate 1 -Stem Stevan.Segmentation.2026
-./desktop/scripts/test-windows.ps1 `
-  -MediaPath desktop/artifacts/test-fixture/Stevan.Segmentation.2026.mp4 `
-  -SubtitlePath desktop/artifacts/test-fixture/Stevan.Segmentation.2026.sr.srt `
-  -RequireSegmentationBoundary `
-  -ReportPath desktop/artifacts/test-results/windows-native-segmentation.json
-```
-
-Плејер прихвата `--smoke-test MEDIA SUBTITLE REPORT.json`. Тест стварно
-декодира видео и звук native VLC-ом, проверава додат и одабран спољни титл,
-помак, паузу, seek и наставак декодирања. Такође издваја звук и проверава
-стварни непразан/non-silent mono PCM WAV 16 kHz/16 bit и трајање. Дужи
-fixture проверава границу сегмената од 600 секунди. JSON именује појединачне
-assertion-е и оно што није тестирано у native тесту: WPF приказ, стварне звучнике, fullscreen,
-исцртан текст титла, липсинк и live услуге. Не своди та ограничења на PASS.
-
-Посебан `--ui-smoke-test` режим стварно отвара WPF прозор, репродукује
-fixture у native видео-host-у, проверава локални ауто-титл, контроле,
-fullscreen и Escape, промену видеа и отказивање операције. Чува JSON и
-снимке стварних desktop пиксела у нормалном и fullscreen стању. Потребна
-је Windows радна површина; headless/session окружење које не може да
-потврди приказ мора пасти на том тесту. Човек и даље проверава изглед,
-исцртан текст, стварне звучнике и синхронизацију — снимање слике само по
-себи не доказује да је титл читљив или филм правилно усклађен.
-
-GitHub испорука у засебној грани садржи само изворе и изворни ZIP у
-`downloads/`. Workflow није укључен и GitHub тестови нису покренути.
-Windows провере обављају се локалним скриптама на корисниковом рачунару.
-Није објављен release нити је пакет представљен као готов производ.
-
-У плејеру отворите Подешавања за своје API кључеве/налог и језик. Не
-постављајте кључеве у Git, разговор, снимке екрана или тест извештаје.
-Titlovi.com налог мора имати потврђену e-mail адресу и активиран API приступ
-на [страници за донације/API](https://titlovi.com/donacije/), према
-[званичним упутствима за API/Kodi](https://titlovi.com/kodi-plugin/).
-Погледајте [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) пре дистрибуције.
+Linux cloud može pokrenuti Core testove i cross-publish, ali nema Windows
+reprodukciju. `scripts/setup-cloud.sh` priprema proverene razvojne alate.
+GitHub grana `stevanplejer-windows-source-20261009` sadrži samo izvorni ZIP,
+kod i uputstva; GitHub testovi i javni release nisu pokrenuti. Pogledaj i
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -31,8 +31,8 @@ $summary = [ordered]@{
     TestBothArchitectures = [bool]$TestBothArchitectures
     Architectures = [ordered]@{}
     Checks = [ordered]@{}
-    NotTested = @('human-visible captions and real speakers', 'live authenticated subtitle sources',
-        'cloud ASR/translation and film lip-sync', 'actual installer/uninstaller on a fresh test account',
+    NotTested = @('human-visible captions and real speakers', 'live keyless subtitle sources',
+        'local model download, ASR/translation and film lip-sync', 'actual installer/uninstaller on a fresh test account',
         'Windows versions/DPI not used for this run', 'final distribution/signing requirements')
     ReleaseStatus = 'BLOCKED_PENDING_REMAINING_ACCEPTANCE'
 }
@@ -100,7 +100,7 @@ try {
         & (Join-Path $PSScriptRoot 'test-windows.ps1') -RuntimeIdentifier $runtime -MediaPath $media -SubtitlePath $subtitle
         $architectureResult.Checks.NativePlaybackAndAudioExtraction = $true
         & (Join-Path $PSScriptRoot 'test-windows.ps1') -RuntimeIdentifier $runtime -Mode Ui -MediaPath $media -SubtitlePath $subtitle
-        $architectureResult.Checks.WpfControlsFullscreenAndDpapi = $true
+        $architectureResult.Checks.WpfControlsFullscreenPreferencesAndSubtitleSelection = $true
         if (-not $SkipSegmentation) {
             & (Join-Path $PSScriptRoot 'test-windows.ps1') -RuntimeIdentifier $runtime -MediaPath (Join-Path $fixture 'Stevan.Segmentation.2026.mp4') -SubtitlePath (Join-Path $fixture 'Stevan.Segmentation.2026.sr.srt') -RequireSegmentationBoundary
             $architectureResult.Checks.AudioSegmentationBoundary = $true
@@ -131,5 +131,5 @@ finally {
     $summary.CompletedUtc = [DateTimeOffset]::UtcNow.ToString('O')
     $summary | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $summaryPath -Encoding utf8
     if ($transcriptStarted) { Stop-Transcript | Out-Null }
-    Write-Host "Local evidence: $reports. Review for personal file paths before sharing; never include settings or API keys."
+    Write-Host "Local evidence: $reports. Review for personal file paths before sharing; do not include personal settings."
 }

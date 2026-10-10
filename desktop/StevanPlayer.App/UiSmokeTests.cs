@@ -20,22 +20,23 @@ public partial class MainWindow
         {
             if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("WPF тест захтева Windows радну површину.");
             if (!File.Exists(mediaPath) || !File.Exists(subtitlePath)) throw new FileNotFoundException("Медијски тест захтева видео и SRT титл.");
-            _settings.AutoSubtitles = false; // Local matching remains active; test never spends live API quota.
-            _settings.AllowCloudTranscription = _settings.AutoSynchronize = false;
+            _settings.AutoSubtitles = false; // This UI fixture does not depend on an external service.
+            _settings.UseLocalAi = _settings.AutoSynchronize = false;
             _settings.PreferredLanguage = "sr";
             _settings.SubtitleOffsetMilliseconds = 0;
-            // Uses only a test sentinel in the isolated directory, never the user's existing settings.
-            var protectedSettings = new StevanPlayer.Core.PlayerSettings { OpenSubtitlesApiKey = "ui-smoke-dpapi-sentinel" };
-            _settingsStore.Save(protectedSettings);
+            // Preferences live in the isolated directory; no credentials are read or written.
+            _settingsStore.Save(new StevanPlayer.Core.PlayerSettings { PreferredLanguage = "hr", UseLocalAi = false });
             string storedText = await File.ReadAllTextAsync(Path.Combine(SettingsStore.DataDirectory, "settings.json"));
-            report.Checks["dpapi_settings_do_not_contain_plaintext_secret"] = !storedText.Contains("ui-smoke-dpapi-sentinel", StringComparison.Ordinal);
-            report.Checks["dpapi_settings_roundtrip_for_current_windows_user"] = _settingsStore.Load().OpenSubtitlesApiKey == "ui-smoke-dpapi-sentinel";
+            report.Checks["settings_do_not_store_api_credentials"] = !storedText.Contains("ApiKey", StringComparison.Ordinal) &&
+                !storedText.Contains("ProtectedCredentials", StringComparison.Ordinal);
+            report.Checks["local_preferences_roundtrip"] = _settingsStore.Load() is { PreferredLanguage: "hr", UseLocalAi: false };
             string fixture = Path.Combine(ownedDirectory, "Smoke.Movie.2026" + Path.GetExtension(mediaPath));
             string caption = Path.Combine(ownedDirectory, "Smoke.Movie.2026.sr.srt");
             string nextFixture = Path.Combine(ownedDirectory, "Next.Movie.2026" + Path.GetExtension(mediaPath));
             File.Copy(mediaPath, fixture);
             File.Copy(subtitlePath, caption);
             File.Copy(mediaPath, nextFixture);
+            await File.WriteAllTextAsync(Path.ChangeExtension(nextFixture, ".sr.srt"), "<html>Invalid local subtitle</html>");
             WindowState = WindowState.Normal;
             Activate();
             OpenInitialFiles([fixture, nextFixture]);
@@ -50,6 +51,28 @@ public partial class MainWindow
                 _player.SpuDescription.Any(track => track.Id == _player.Spu), TimeSpan.FromSeconds(8), timeout.Token);
             report.Checks["adjacent_local_subtitle_automatically_supplied"] = _currentSubtitlePath == caption;
             report.Checks["actual_subtitle_track_selected"] = _player.Spu >= 0 && _player.SpuDescription.Any(track => track.Id == _player.Spu);
+            await SearchSubtitlesAsync(automatic: false);
+            var available = ResultsList.Items.OfType<StevanPlayer.Core.SubtitleCandidate>().ToArray();
+            report.Checks["available_translations_are_listed_inside_player"] = available.Length == 1 && available[0].Language == "sr";
+            if (available.Length != 1) throw new InvalidOperationException("Тест филм нема очекивани превод на списку.");
+            ResultsList.SelectedItem = available[0];
+            await WaitForUiAsync(() => _operation is null && _currentSubtitlePath is not null && _currentSubtitlePath != caption &&
+                _player.Spu >= 0 && _player.Spu == _currentSubtitleTrackId, TimeSpan.FromSeconds(10), timeout.Token);
+            report.Checks["single_selection_loads_chosen_translation_without_browser"] = File.Exists(_currentSubtitlePath) &&
+                _player.Spu == _currentSubtitleTrackId && SubtitleLabel.Text.StartsWith("Укључен:", StringComparison.Ordinal);
+            ResultsList.SelectedItem = null;
+            await WaitForUiAsync(() => _player.Spu == -1 && _operation is null, TimeSpan.FromSeconds(3), timeout.Token);
+            report.Checks["unchecking_translation_disables_native_subtitle"] = _currentSubtitlePath is null &&
+                _currentSubtitleTrackId == -1 && !SyncButton.IsEnabled;
+            ResultsList.SelectedItem = available[0];
+            ResultsList.SelectedItem = null;
+            await Task.Delay(700, timeout.Token);
+            report.Checks["unchecking_pending_choice_prevents_later_attachment"] = _player.Spu == -1 &&
+                _currentSubtitlePath is null && _operation is null;
+            ResultsList.SelectedItem = available[0];
+            await WaitForUiAsync(() => _operation is null && _currentSubtitlePath is not null &&
+                _player.Spu >= 0 && _player.Spu == _currentSubtitleTrackId, TimeSpan.FromSeconds(10), timeout.Token);
+            report.Checks["translation_can_be_selected_again_after_cancel"] = File.Exists(_currentSubtitlePath);
             report.ActiveSubtitleTrack = _player.Spu;
             AudioTrackButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             var audioMenu = AudioTrackButton.ContextMenu ?? throw new InvalidOperationException("Звучни записи немају мени.");
@@ -134,6 +157,9 @@ public partial class MainWindow
             report.Checks["media_switch_clears_old_subtitle_and_results"] = _currentSubtitlePath is null && ResultsList.ItemsSource is null;
             await WaitForUiAsync(() => _player.IsPlaying && _media!.Statistics.DecodedVideo > 3, TimeSpan.FromSeconds(10), timeout.Token);
             report.Checks["next_video_really_decodes"] = _media!.Statistics.DecodedVideo > 3 && _media.Statistics.DecodedAudio > 0;
+            await WaitForUiAsync(() => _operation is null, TimeSpan.FromSeconds(5), timeout.Token);
+            report.Checks["malformed_adjacent_subtitle_is_rejected"] = _currentSubtitlePath is null &&
+                _currentSubtitleTrackId == -1 && SubtitleLabel.Text == "Локални титл није исправан.";
             Close();
             report.Checks["window_closes_and_disposes_native_player"] = _closing && !IsVisible;
             report.Status = report.Checks.Count > 0 && report.Checks.Values.All(value => value) ? "PASS" : "FAIL";
@@ -182,7 +208,7 @@ public partial class MainWindow
             "Human confirmation of audible output and screenshot appearance",
             "Hardware keyboard/mouse interaction, multi-monitor DPI combinations, codecs beyond the fixture",
             "Live subtitle provider searches/downloads and access quotas",
-            "Cloud transcription/translation and subjective subtitle synchronization quality",
+            "Local speech recognition/translation and subjective subtitle synchronization quality",
             "Installer, signature reputation, file associations and uninstall"
         ];
     }

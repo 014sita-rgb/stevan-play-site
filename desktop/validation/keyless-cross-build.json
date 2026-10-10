@@ -1,0 +1,32 @@
+{
+  "Status": "PASS",
+  "Scope": "Linux locked restore, core unit tests, Windows cross-publish, native PE and licence inventory, NSIS compilation only",
+  "DateUtc": "2026-10-10T16:51:27.447225+00:00",
+  "CoreTests": {
+    "Passed": 295,
+    "Failed": 0,
+    "Skipped": 0,
+    "FinishedUtc": "2026-10-10T16:43:52.0566846+00:00"
+  },
+  "WindowsRuntimeIdentifiers": [
+    "win-x64",
+    "win-x86"
+  ],
+  "InstallerSha256": {
+    "STEVANplejer-Windows-x64-candidate-setup.exe": "9c7f7818d4f795096db949f26087f57e4a6f7b68e4cc5f14bd7475d0ac496a0d",
+    "STEVANplejer-Windows-x86-candidate-setup.exe": "e3d3691707bac032b1bb0ab831175da8ab5c10e5a31cc7c5e49dc84ab5e00ad7",
+    "STEVANplejer-Windows-universal-candidate-setup.exe": "42080b537bf8b099d607368214de26479277905b64cadebfd5497de3ddc18603"
+  },
+  "ApplicationDllSha256": {
+    "win-x64": "3f4905c7c52ea9fb10a585d0bf160b28e936e335ea969312992a2efff7a3f019",
+    "win-x86": "93eaaca450aa1ef736e264b8aed4e566a4afc5422e2d52e84e87913ac9358180"
+  },
+  "NotTested": [
+    "Actual Windows playback, visible subtitles and controls",
+    "Actual Windows install and Microsoft VC runtime download",
+    "Live Stremio OpenSubtitles search/download",
+    "Actual Whisper/Qwen weights and speech/translation quality",
+    "Five-source coverage and film-specific subtitle alignment"
+  ],
+  "ReleaseStatus": "BLOCKED_PENDING_WINDOWS_AND_AI_ACCEPTANCE"
+}

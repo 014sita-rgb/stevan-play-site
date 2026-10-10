@@ -29,7 +29,7 @@ $report = [ordered]@{
     ExpectedProcessArchitecture = if ($RuntimeIdentifier -eq 'win-x64') { 'X64' } else { 'X86' }
     RuntimeIdentifier = $RuntimeIdentifier
     Checks = [ordered]@{}
-    NotTested = @('human-visible installer UI', 'live subtitle sources', 'cloud ASR/translation', 'Windows versions not used for this run')
+    NotTested = @('human-visible installer UI', 'live keyless subtitle sources', 'local model download and ASR/translation', 'Windows versions not used for this run')
 }
 $applicationRoot = Join-Path $env:LOCALAPPDATA 'Programs/StevanPlayer'
 $settingsRoot = Join-Path $env:LOCALAPPDATA 'StevanPlayer'

@@ -29,7 +29,9 @@ public partial class App : Application
                     SettingsStore.TestDataDirectory = Path.Combine(testDirectory, "Settings");
                     try
                     {
-                        var testWindow = new MainWindow();
+                        var testWindow = new MainWindow(new StevanPlayer.Core.SubtitleCatalog([
+                            new StevanPlayer.Core.Providers.LocalSubtitleProvider([testDirectory])
+                        ]));
                         MainWindow = testWindow;
                         testWindow.Show();
                         int result = await testWindow.RunUiSmokeTestAsync(e.Args[1], e.Args[2], e.Args[3], testDirectory);

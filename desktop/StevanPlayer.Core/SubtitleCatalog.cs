@@ -44,7 +44,7 @@ public sealed class SubtitleCatalog(IEnumerable<ISubtitleProvider> providers)
             throw new InvalidDataException("Титл припада другој епизоди.");
         var payload = await provider.DownloadAsync(candidate, settings, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        var normalized = SubtitleArchive.Normalize(payload, media);
+        var normalized = SubtitleArchive.Normalize(payload, media, candidate.Language);
         var identity = candidate.ProviderId + "\n" + candidate.Id + "\n" + normalized;
         var name = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant() + ".srt";
         Directory.CreateDirectory(cacheDirectory);

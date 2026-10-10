@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -22,10 +21,12 @@ public partial class MainWindow : Window
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _player;
     private readonly HttpClient _providerHttp = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(45) };
-    private readonly HttpClient _aiHttp = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromMinutes(5) };
+    private readonly HttpClient _modelHttp = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
     private readonly SubtitleCatalog _catalog;
+    private readonly LocalModelManager _models;
     private readonly ISubtitleGenerator _generator;
     private readonly SettingsStore _settingsStore = new();
+    private readonly SemaphoreSlim _subtitleAttachment = new(1, 1);
     private PlayerSettings _settings;
     private readonly ObservableCollection<PlaylistEntry> _playlist = [];
     private readonly DispatcherTimer _ticker;
@@ -35,10 +36,11 @@ public partial class MainWindow : Window
     private string? _currentPath;
     private string? _currentSubtitlePath;
     private int _currentSubtitleTrackId = -1, _trackSelectionSequence;
+    private int _ambiguousSubtitleGeneration = -1;
     private IReadOnlyList<SubtitleCue>? _transcript;
     private string? _transcriptLanguage;
     private int _generation;
-    private bool _closing, _initializing = true, _seeking, _updatingSeek, _fullscreen;
+    private bool _closing, _initializing = true, _seeking, _updatingSeek, _fullscreen, _changingResults;
     private WindowStyle _previousStyle;
     private ResizeMode _previousResizeMode;
     private WindowState _previousState;
@@ -46,15 +48,23 @@ public partial class MainWindow : Window
     private bool _previousTopmost;
     private DateTime _lastMouseActivity = DateTime.UtcNow;
 
-    public MainWindow()
+    public MainWindow() : this(null) { }
+
+    internal MainWindow(SubtitleCatalog? catalog)
     {
         InitializeComponent();
         _settings = _settingsStore.Load();
         _libVlc = new LibVLC("--no-video-title-show", "--no-snapshot-preview", "--no-sub-autodetect-file", "--quiet");
         _player = new MediaPlayer(_libVlc) { Volume = 75, EnableKeyInput = false, EnableMouseInput = false };
         Video.MediaPlayer = _player;
-        _catalog = new SubtitleCatalog([new OpenSubtitlesProvider(_providerHttp), new SubDlProvider(_providerHttp), new TitloviProvider(_providerHttp)]);
-        _generator = new OpenAiSubtitleGenerator(_aiHttp, new LibVlcAudioExtractor());
+        _catalog = catalog ?? new SubtitleCatalog([
+            new TitloviPublicProvider(_providerHttp), new StremioOpenSubtitlesProvider(_providerHttp),
+            new LocalSubtitleProvider([Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"), SettingsStore.CacheDirectory])
+        ]);
+        _models = new LocalModelManager(_modelHttp, SettingsStore.ModelsDirectory);
+        _generator = new LocalSubtitleGenerator(new LibVlcAudioExtractor(),
+            () => new OfflineSpeechRecognizer(_models.SpeechModelPath),
+            () => new OfflineSubtitleTranslator(_models.TranslationModelPath), _models.VerifyAsync);
         PlaylistList.ItemsSource = _playlist;
         LanguageBox.SelectedIndex = _settings.PreferredLanguage switch { "hr" => 1, "bs" => 2, _ => 0 };
         UpdateOffsetLabel();
@@ -116,20 +126,14 @@ public partial class MainWindow : Window
         _media = new Media(_libVlc, path, remote ? FromType.FromLocation : FromType.FromPath);
         _media.AddOption(":no-sub-autodetect-file");
         string? local = remote ? null : MediaIdentifier.FindLocalSubtitle(path, _settings.PreferredLanguage);
-        if (local is not null)
-        {
-            if (_media.AddSlave(MediaSlaveType.Subtitle, 4, new Uri(Path.GetFullPath(local)).AbsoluteUri))
-                _currentSubtitlePath = local;
-            else local = null;
-        }
-        ResultsList.ItemsSource = null;
+        SetSubtitleResults(null);
         DownloadButton.IsEnabled = false;
-        SyncButton.IsEnabled = local is not null && !remote;
+        SyncButton.IsEnabled = false;
         SearchButton.IsEnabled = true;
         GenerateButton.IsEnabled = !remote;
         LocalSubtitleButton.IsEnabled = true;
         PlayButton.IsEnabled = StopButton.IsEnabled = true;
-        SubtitleLabel.Text = local is null ? "Титл још није учитан." : "Додат локални титл: " + Path.GetFileName(local);
+        SubtitleLabel.Text = local is null ? "Титл још није учитан." : "Пронађен локални титл: " + Path.GetFileName(local);
         MediaName.Text = DisplayName(path);
         Title = DisplayName(path) + " · СТЕВАНplejer";
         Welcome.Visibility = Visibility.Collapsed;
@@ -142,8 +146,8 @@ public partial class MainWindow : Window
             SetStatus("Видео не може да се покрене. Проверите датотеку или адресу.");
             return;
         }
-        SetStatus(local is null ? "Репродукција: " + DisplayName(path) : "Додат локални титл: " + Path.GetFileName(local));
-        if (local is not null) _ = ConfirmInitialSubtitleAsync(local, _generation);
+        SetStatus(local is null ? "Репродукција: " + DisplayName(path) : "Проверавам локални титл: " + Path.GetFileName(local));
+        if (local is not null) _ = LoadInitialSubtitleAsync(local);
         if (local is null && _settings.AutoSubtitles) _ = SearchSubtitlesAsync(automatic: true);
     }
 
@@ -157,74 +161,70 @@ public partial class MainWindow : Window
             SetStatus("Препознајем филм и претражујем титлове…");
             MediaIdentity identity = await MediaIdentifier.IdentifyAsync(path, context.Cancellation.Token);
             if (!IsCurrent(context)) return;
+            string? metadataTitle = _media?.Meta(MetadataType.Title);
+            if (!string.IsNullOrWhiteSpace(metadataTitle) && metadataTitle.Length <= 300 &&
+                !metadataTitle.Equals(DisplayName(path), StringComparison.OrdinalIgnoreCase) &&
+                !Uri.TryCreate(metadataTitle, UriKind.Absolute, out _))
+            {
+                var metadata = MediaIdentifier.Parse(metadataTitle);
+                identity = identity with { Title = metadata.Title, Year = identity.Year ?? metadata.Year,
+                    Season = identity.Season ?? metadata.Season, Episode = identity.Episode ?? metadata.Episode };
+            }
             _identity = identity;
             SubtitleSearchResult results = await _catalog.SearchAsync(identity, _settings, context.Cancellation.Token);
             if (!IsCurrent(context)) return;
-            ResultsList.ItemsSource = results.Candidates;
+            SetSubtitleResults(results.Candidates);
             string notices = string.Join(" · ", results.Notices.Select(item => item.Message));
             if (results.Candidates.Count == 0)
             {
                 SetStatus("Титл није пронађен." + (notices.Length == 0 ? "" : " " + notices));
                 if (automatic && !IsRemote(path) && AiIsEnabled()) await GenerateWithinOperationAsync(context);
-                return;
             }
-            SetStatus($"Пронађено титлова: {results.Candidates.Count}." + (notices.Length == 0 ? "" : " " + notices));
-            if (!automatic) return;
-            SubtitleCandidate[] automaticCandidates = results.Candidates.Where(candidate => ConfidentMatch(candidate, identity)).Take(6).ToArray();
-            if (automaticCandidates.Length == 0)
-            {
-                SetStatus("Пронађени титлови немају довољно поуздану подударност са видео датотеком. Изаберите одговарајуће издање у резултатима.");
-                return;
-            }
-            foreach (SubtitleCandidate candidate in automaticCandidates)
-            {
-                context.Cancellation.Token.ThrowIfCancellationRequested();
-                try
-                {
-                    string subtitle = await _catalog.DownloadAsync(candidate, _settings, SettingsStore.CacheDirectory,
-                        context.Cancellation.Token, identity);
-                    if (!IsCurrent(context)) return;
-                    if (!await AttachSubtitleAsync(subtitle, context)) continue;
-                    ResultsList.SelectedItem = candidate;
-                    SetStatus($"Титл је укључен: {candidate.ProviderId} · {candidate.Language} · {candidate.Release}");
-                    if (_settings.AutoSynchronize && AiIsEnabled() && !IsRemote(path))
-                        await TrySynchronizeWithinOperationAsync(context);
-                    return;
-                }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { if (IsCurrent(context)) SetStatus("Изабрани титл није доступан: " + SafeMessage(ex)); }
-            }
-            if (IsCurrent(context)) SetStatus("Титлови су пронађени, али нису учитани. Изаберите други резултат или додајте локални титл.");
+            else SetStatus($"Доступно превода: {results.Candidates.Count}. Означите један на списку; преузимање и приказ почињу у плејеру." +
+                (notices.Length == 0 ? "" : " " + notices));
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { if (IsCurrent(context)) SetStatus("Претрага није успела: " + SafeMessage(ex)); }
         finally { FinishOperation(context); }
     }
 
-    private async Task ConfirmInitialSubtitleAsync(string path, int generation)
+    private async Task LoadInitialSubtitleAsync(string path)
     {
+        var context = BeginOperation();
+        bool shouldSearch = false;
         try
         {
-            for (int i = 0; i < 100 && !_closing && generation == _generation; i++)
+            if (new FileInfo(path).Length > 8_000_000)
+                throw new InvalidDataException("Локални титл је превелик.");
+            byte[] bytes = await File.ReadAllBytesAsync(path, context.Cancellation.Token);
+            SubtitleFormat.Parse(SubtitleFormat.Decode(bytes), Path.GetExtension(path));
+            if (!IsCurrent(context)) return;
+            if (await AttachSubtitleAsync(path, context))
             {
-                if (_player.Spu >= 0 && _player.SpuDescription.Any(track => track.Id == _player.Spu))
-                {
-                    if (_currentSubtitlePath == path)
-                    {
-                        _currentSubtitleTrackId = _player.Spu;
-                        _player.SetSpuDelay((long)_settings.SubtitleOffsetMilliseconds * 1000);
-                        SubtitleLabel.Text = "Локални титл: " + Path.GetFileName(path);
-                        SetStatus("Изабран је титл за репродукцију: " + Path.GetFileName(path));
-                    }
-                    return;
-                }
-                if (_player.State is VLCState.Error or VLCState.Ended) break;
-                await Task.Delay(100);
+                SetStatus("Изабран је локални титл за репродукцију: " + Path.GetFileName(path));
             }
-            if (!_closing && generation == _generation && _currentSubtitlePath == path)
-                SetStatus("Локални титл је додат, али активна стаза титла није потврђена. Покушајте дугме Локални титл.");
+            else if (IsCurrent(context))
+            {
+                SubtitleLabel.Text = "Локални титл није учитан.";
+                SetStatus("Локални титл није учитан. Покушајте други титл или претрагу извора.");
+            }
         }
-        catch (ObjectDisposedException) when (_closing) { }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (IsCurrent(context))
+            {
+                SubtitleLabel.Text = "Локални титл није исправан.";
+                SetStatus("Локални титл није учитан: " + SafeMessage(ex));
+            }
+        }
+        finally
+        {
+            shouldSearch = IsCurrent(context) && _settings.AutoSubtitles;
+            FinishOperation(context);
+        }
+        if (shouldSearch && !_closing && context.Generation == _generation)
+            await SearchSubtitlesAsync(automatic: true);
     }
 
     private async Task DownloadSelectedAsync()
@@ -250,33 +250,70 @@ public partial class MainWindow : Window
 
     private async Task<bool> AttachSubtitleAsync(string path, OperationContext context)
     {
-        for (int i = 0; i < 120 && IsCurrent(context); i++)
-        {
-            if (_player.State is VLCState.Playing or VLCState.Paused) break;
-            if (_player.State is VLCState.Error or VLCState.Ended or VLCState.Stopped) return false;
-            await Task.Delay(100, context.Cancellation.Token);
-        }
-        if (!IsCurrent(context) || _player.State is not (VLCState.Playing or VLCState.Paused)) return false;
-        if (_currentSubtitlePath == path && _currentSubtitleTrackId >= 0 && _player.Spu == _currentSubtitleTrackId)
-        {
-            _player.SetSpuDelay((long)_settings.SubtitleOffsetMilliseconds * 1000);
-            return true;
-        }
-        var previousTracks = _player.SpuDescription.Select(track => track.Id).ToHashSet();
-        bool wasPaused = _player.State == VLCState.Paused;
-        if (!_player.AddSlave(MediaSlaveType.Subtitle, new Uri(Path.GetFullPath(path)).AbsoluteUri, true)) return false;
+        await _subtitleAttachment.WaitAsync(context.Cancellation.Token);
+        Media? media = _media;
+        bool SameMedia() => !_closing && context.Generation == _generation && ReferenceEquals(media, _media);
+        bool wasPaused = false;
+        bool temporarilyResumed = false;
         try
         {
-            if (wasPaused) _player.SetPause(false);
-            // AddSlave acceptance is asynchronous. Success requires the new external track to be selected.
-            for (int i = 0; i < 60 && IsCurrent(context); i++)
+            if (!IsCurrent(context) || media is null) return false;
+            if (_ambiguousSubtitleGeneration == context.Generation)
+                throw new InvalidOperationException("Плејер није потврдио претходно додавање титла. Поново отворите видео пре избора другог превода.");
+            for (int i = 0; i < 120 && IsCurrent(context); i++)
             {
-                int selected = _player.Spu;
-                if (selected >= 0 && !previousTracks.Contains(selected) && _player.SpuDescription.Any(track => track.Id == selected))
+                if (_player.State is VLCState.Playing or VLCState.Paused) break;
+                if (_player.State is VLCState.Error or VLCState.Ended or VLCState.Stopped) return false;
+                await Task.Delay(100, context.Cancellation.Token);
+            }
+            if (!IsCurrent(context) || _player.State is not (VLCState.Playing or VLCState.Paused)) return false;
+            if (_currentSubtitlePath == path && _currentSubtitleTrackId >= 0 && _player.Spu == _currentSubtitleTrackId)
+            {
+                _player.SetSpuDelay((long)_settings.SubtitleOffsetMilliseconds * 1000);
+                return true;
+            }
+            var previousTracks = _player.SpuDescription.Select(track => track.Id).ToHashSet();
+            wasPaused = _player.State == VLCState.Paused;
+            // Native acceptance is asynchronous and cannot be undone by canceling its Task.
+            // Do not automatically select this slave: a later user choice can cancel it.
+            if (!_player.AddSlave(MediaSlaveType.Subtitle, new Uri(Path.GetFullPath(path)).AbsoluteUri, false)) return false;
+            if (wasPaused)
+            {
+                _player.SetPause(false);
+                temporarilyResumed = true;
+            }
+            int newTrack = -1;
+            for (int i = 0; i < 60 && SameMedia(); i++)
+            {
+                var added = _player.SpuDescription.Where(track => track.Id >= 0 && !previousTracks.Contains(track.Id)).ToArray();
+                if (added.Length > 1)
+                {
+                    _ambiguousSubtitleGeneration = context.Generation;
+                    return false;
+                }
+                if (added.Length == 1)
+                {
+                    newTrack = added[0].Id;
+                    break;
+                }
+                // Drain even a canceled add before allowing another add to take its place.
+                // Otherwise its delayed track could be mistaken for the next user's choice.
+                await Task.Delay(100);
+            }
+            if (!SameMedia()) return false;
+            if (newTrack < 0)
+            {
+                _ambiguousSubtitleGeneration = context.Generation;
+                return false;
+            }
+            if (!IsCurrent(context) || !_player.SetSpu(newTrack)) return false;
+            for (int i = 0; i < 30 && IsCurrent(context); i++)
+            {
+                if (_player.Spu == newTrack)
                 {
                     _player.SetSpuDelay((long)_settings.SubtitleOffsetMilliseconds * 1000);
                     _currentSubtitlePath = path;
-                    _currentSubtitleTrackId = selected;
+                    _currentSubtitleTrackId = newTrack;
                     SubtitleLabel.Text = "Укључен: " + Path.GetFileName(path);
                     SyncButton.IsEnabled = _currentPath is not null && !IsRemote(_currentPath);
                     return true;
@@ -286,7 +323,11 @@ public partial class MainWindow : Window
             }
             return false;
         }
-        finally { if (wasPaused && !_closing && context.Generation == _generation) _player.SetPause(true); }
+        finally
+        {
+            if (temporarilyResumed && wasPaused && SameMedia()) _player.SetPause(true);
+            _subtitleAttachment.Release();
+        }
     }
 
     private async Task<IReadOnlyList<SubtitleCue>> GetTranscriptAsync(OperationContext context)
@@ -311,7 +352,7 @@ public partial class MainWindow : Window
         UpdateOffsetLabel();
         if (!await AttachSubtitleAsync(path, context)) throw new InvalidOperationException("Генерисани титл није учитан; поновите репродукцију и додајте га из кеша.");
         SaveSettings();
-        SetStatus("AI титл је укључен. Проверите превод и временску усклађеност; препознавање може садржати грешке.");
+        SetStatus("Локално припремљен титл је укључен. Проверите превод и временску усклађеност; препознавање може садржати грешке.");
     }
 
     private async Task SynchronizeWithinOperationAsync(OperationContext context)
@@ -355,9 +396,14 @@ public partial class MainWindow : Window
         if (_currentPath is null || IsRemote(_currentPath)) return;
         if (!AiIsEnabled())
         {
-            MessageBox.Show(this, "У Подешавањима унесите OpenAI API кључ и дозволите слање звука и текста. API обрада може бити наплаћена.",
-                "AI титлови", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            if (!Environment.Is64BitProcess)
+            {
+                MessageBox.Show(this, "Локално препознавање и превод захтевају 64-bit издање плејера.",
+                    "Локални титлови", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            Settings_Click(this, new RoutedEventArgs());
+            if (!AiIsEnabled()) return;
         }
         var context = BeginOperation();
         try
@@ -370,19 +416,7 @@ public partial class MainWindow : Window
         finally { FinishOperation(context); }
     }
 
-    private bool AiIsEnabled() => _settings.AllowCloudTranscription && !string.IsNullOrWhiteSpace(_settings.AiApiKey);
-
-    private static bool ConfidentMatch(SubtitleCandidate candidate, MediaIdentity media)
-    {
-        if (candidate.HashMatched) return true;
-        MediaIdentity release = MediaIdentifier.Parse(candidate.Release);
-        if (media.Year.HasValue && release.Year.HasValue && media.Year != release.Year) return false;
-        if (media.Episode.HasValue && (candidate.Episode ?? release.Episode) != media.Episode) return false;
-        if (media.Season.HasValue && (candidate.Season ?? release.Season) != media.Season) return false;
-        string[] title = Regex.Split(media.Title.ToLowerInvariant(), @"[^\p{L}\p{N}]+").Where(word => word.Length > 0).ToArray();
-        var releaseWords = Regex.Split(release.Title.ToLowerInvariant(), @"[^\p{L}\p{N}]+").Where(word => word.Length > 0).ToHashSet();
-        return title.Length > 0 && title.All(releaseWords.Contains);
-    }
+    private bool AiIsEnabled() => _settings.UseLocalAi && Environment.Is64BitProcess && _models.IsInstalled;
 
     private OperationContext BeginOperation()
     {
@@ -531,15 +565,14 @@ public partial class MainWindow : Window
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         CancelOperation();
-        var dialog = new SettingsWindow(_settings) { Owner = this };
+        var dialog = new SettingsWindow(_settings, _models) { Owner = this };
         if (dialog.ShowDialog() == true && dialog.Result is not null)
-        { _settings = dialog.Result; SaveSettings(); SetStatus("Подешавања су сачувана за овог Windows корисника."); }
-    }
-    private void Source_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: string address }) return;
-        try { Process.Start(new ProcessStartInfo(address) { UseShellExecute = true }); }
-        catch { SetStatus("Прегледач није доступан. Извор: " + address); }
+        {
+            _settings = dialog.Result;
+            _transcript = null;
+            SaveSettings();
+            SetStatus("Подешавања су сачувана за овог Windows корисника.");
+        }
     }
     private void Language_Changed(object sender, SelectionChangedEventArgs e)
     {
@@ -552,8 +585,29 @@ public partial class MainWindow : Window
     }
     private async void Search_Click(object sender, RoutedEventArgs e) => await SearchSubtitlesAsync(automatic: false);
     private async void Download_Click(object sender, RoutedEventArgs e) => await DownloadSelectedAsync();
-    private async void Result_DoubleClick(object sender, MouseButtonEventArgs e) => await DownloadSelectedAsync();
-    private void Results_SelectionChanged(object sender, SelectionChangedEventArgs e) => DownloadButton.IsEnabled = ResultsList.SelectedItem is SubtitleCandidate;
+    private async void Results_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        DownloadButton.IsEnabled = ResultsList.SelectedItem is SubtitleCandidate;
+        if (_changingResults || _closing) return;
+        if (e.AddedItems.Count > 0 && ResultsList.SelectedItem is SubtitleCandidate)
+            await DownloadSelectedAsync();
+        else if (e.RemovedItems.Count > 0 && ResultsList.SelectedItem is null)
+        {
+            CancelOperation();
+            _player.SetSpu(-1);
+            _currentSubtitlePath = null;
+            _currentSubtitleTrackId = -1;
+            SyncButton.IsEnabled = false;
+            SubtitleLabel.Text = "Титлови су искључени.";
+            SetStatus("Титлови су искључени. Означите превод који желите да гледате.");
+        }
+    }
+    private void SetSubtitleResults(IReadOnlyList<SubtitleCandidate>? candidates)
+    {
+        _changingResults = true;
+        try { ResultsList.ItemsSource = candidates; }
+        finally { _changingResults = false; }
+    }
     private async void Generate_Click(object sender, RoutedEventArgs e) => await RunAiOperationAsync(synchronize: false);
     private async void Synchronize_Click(object sender, RoutedEventArgs e) => await RunAiOperationAsync(synchronize: true);
     private void Playlist_DoubleClick(object sender, MouseButtonEventArgs e) { if (PlaylistList.SelectedItem is PlaylistEntry entry) OpenMedia(entry.Path); }
@@ -731,7 +785,7 @@ public partial class MainWindow : Window
         _media?.Dispose();
         _libVlc.Dispose();
         _providerHttp.Dispose();
-        _aiHttp.Dispose();
+        _modelHttp.Dispose();
     }
 
     private sealed record OperationContext(int Generation, CancellationTokenSource Cancellation);

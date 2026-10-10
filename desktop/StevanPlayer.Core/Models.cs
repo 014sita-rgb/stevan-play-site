@@ -16,6 +16,7 @@ public sealed class PlayerSettings
 {
     public string PreferredLanguage { get; set; } = "sr";
     public bool AutoSubtitles { get; set; } = true;
+    public bool UseLocalAi { get; set; } = true;
     public string OpenSubtitlesApiKey { get; set; } = "";
     public string OpenSubtitlesToken { get; set; } = "";
     public string SubDlApiKey { get; set; } = "";

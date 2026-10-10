@@ -17,12 +17,66 @@ const nativeDirectory = fs.existsSync(path.join(publish, 'libvlc', runtimeIdenti
     ? path.join(publish, 'libvlc', runtimeIdentifier) : publish;
 if (!fs.existsSync(path.join(nativeDirectory, 'libvlc.dll'))) throw new Error('The published native libVLC runtime is missing.');
 
+// Mutate only an explicitly owned publish directory, never a user-selected tree.
+const allowedOutputRoot = fs.realpathSync(path.join(desktop, 'artifacts'));
+const resolvedPublish = fs.realpathSync(publish);
+if (!resolvedPublish.startsWith(allowedOutputRoot + path.sep)
+    || !fs.existsSync(path.join(publish, '.stevan-generated-output'))) {
+    throw new Error('Prepare packaging only inside desktop/artifacts with the .stevan-generated-output ownership marker.');
+}
+function removeOwnedDirectory(directory) {
+    if (!fs.existsSync(directory)) return;
+    if (fs.lstatSync(directory).isSymbolicLink()) throw new Error('Native output directory must not be a symbolic link.');
+    fs.rmSync(directory, { recursive: true });
+}
+
+// Whisper copies every Windows architecture; LLamaSharp's x86 fallback copies
+// every OS because it has no x86 backend. Ship only the selected Windows RID.
+for (const architecture of ['win-x64', 'win-x86', 'win-arm64'].filter(value => value !== runtimeIdentifier))
+    removeOwnedDirectory(path.join(publish, 'libvlc', architecture));
+const engineRuntimes = path.join(publish, 'runtimes');
+if (!fs.existsSync(engineRuntimes)) throw new Error('The published local subtitle engine runtimes are missing.');
+for (const entry of fs.readdirSync(engineRuntimes)) {
+    if (entry === runtimeIdentifier) continue;
+    if (entry === 'noavx') {
+        const noAvx = path.join(engineRuntimes, entry);
+        if (fs.lstatSync(noAvx).isSymbolicLink()) throw new Error('Native output directory must not be a symbolic link.');
+        for (const architecture of fs.readdirSync(noAvx))
+            if (architecture !== runtimeIdentifier) removeOwnedDirectory(path.join(noAvx, architecture));
+    } else removeOwnedDirectory(path.join(engineRuntimes, entry));
+}
+for (const file of walk(engineRuntimes))
+    if (/\.(?:so(?:\.\d+)*|dylib|a|metal)$/i.test(file)) fs.unlinkSync(file);
+
+// Runtime.NoAvx 1.8.1's x86 MSBuild target misnames its actual PE DLL.
+const x86NoAvxMisnamed = path.join(engineRuntimes, 'noavx', 'win-x86', 'whisper.ggml');
+if (runtimeIdentifier === 'win-x86' && fs.existsSync(x86NoAvxMisnamed)) {
+    const corrected = path.join(path.dirname(x86NoAvxMisnamed), 'whisper.dll');
+    if (fs.existsSync(corrected)) throw new Error('Both correct and misnamed x86 Whisper runtimes were published.');
+    fs.renameSync(x86NoAvxMisnamed, corrected);
+}
+const whisperNames = ['whisper.dll', 'ggml-whisper.dll', 'ggml-base-whisper.dll', 'ggml-cpu-whisper.dll'];
+const requiredEngineFiles = [
+    ...whisperNames.map(name => path.join(engineRuntimes, runtimeIdentifier, name)),
+    ...whisperNames.map(name => path.join(engineRuntimes, 'noavx', runtimeIdentifier, name))
+];
+if (runtimeIdentifier === 'win-x64') {
+    for (const variant of ['noavx', 'avx', 'avx2', 'avx512'])
+        for (const name of ['llama.dll', 'ggml.dll', 'ggml-base.dll', 'ggml-cpu.dll', 'mtmd.dll'])
+            requiredEngineFiles.push(path.join(engineRuntimes, runtimeIdentifier, 'native', variant, name));
+} else if (fs.existsSync(path.join(engineRuntimes, runtimeIdentifier, 'native'))) {
+    throw new Error('LLamaSharp has no supported x86 native backend; the x86 payload must not contain one.');
+}
+for (const file of [...requiredEngineFiles, ...['Whisper.net.dll', 'LLamaSharp.dll'].map(name => path.join(publish, name))])
+    if (!fs.existsSync(file)) throw new Error(`Missing local subtitle engine file: ${file}`);
+
 // A directory/RID label alone does not prove the binaries have the right bitness.
 // Inspect only native PE files, not AnyCPU managed assemblies, before packaging.
 const expectedMachine = runtimeIdentifier === 'win-x64' ? 0x8664 : 0x014c;
 for (const file of [
     ...['STEVANplejer.exe', 'coreclr.dll', 'wpfgfx_cor3.dll', 'PresentationNative_cor3.dll'].map(name => path.join(publish, name)),
-    ...['libvlc.dll', 'libvlccore.dll'].map(name => path.join(nativeDirectory, name))
+    ...['libvlc.dll', 'libvlccore.dll'].map(name => path.join(nativeDirectory, name)),
+    ...walk(engineRuntimes).filter(file => /\.dll$/i.test(file))
 ]) {
     const descriptor = fs.openSync(file, 'r');
     try {
@@ -38,22 +92,6 @@ for (const file of [
         if (pe.readUInt16LE(4) !== expectedMachine)
             throw new Error(`Native binary architecture does not match ${runtimeIdentifier}: ${file}`);
     } finally { fs.closeSync(descriptor); }
-}
-
-// The NuGet package publishes three architectures. Remove only its two known,
-// generated native directories, and only inside this project's owned output.
-const allowedOutputRoot = fs.realpathSync(path.join(desktop, 'artifacts'));
-const resolvedPublish = fs.realpathSync(publish);
-if (!resolvedPublish.startsWith(allowedOutputRoot + path.sep)
-    || !fs.existsSync(path.join(publish, '.stevan-generated-output'))) {
-    throw new Error('Prepare packaging only inside desktop/artifacts with the .stevan-generated-output ownership marker.');
-}
-for (const architecture of ['win-x64', 'win-x86', 'win-arm64'].filter(value => value !== runtimeIdentifier)) {
-    const directory = path.join(publish, 'libvlc', architecture);
-    if (fs.existsSync(directory)) {
-        if (fs.lstatSync(directory).isSymbolicLink()) throw new Error('Native output directory must not be a symbolic link.');
-        fs.rmSync(directory, { recursive: true });
-    }
 }
 
 const notices = path.join(publish, 'licenses');
@@ -74,9 +112,24 @@ const desktopVersion = frameworks.find(item => item.name === 'Microsoft.WindowsD
 if (!coreVersion || !desktopVersion) throw new Error('The application must publish both .NET and WPF runtimes self-contained.');
 const packages = [
     ['libvlcsharp', '3.10.1'], ['libvlcsharp.wpf', '3.10.1'],
-    ['videolan.libvlc.windows', '3.0.24'], [`microsoft.netcore.app.runtime.${runtimeIdentifier}`, coreVersion],
+    ['videolan.libvlc.windows', '3.0.24'], ['whisper.net', '1.8.1'],
+    ['whisper.net.runtime', '1.8.1'], ['whisper.net.runtime.noavx', '1.8.1'],
+    ['llamasharp', '0.27.0'], ['llamasharp.backend.cpu', '0.27.0'],
+    [`microsoft.netcore.app.runtime.${runtimeIdentifier}`, coreVersion],
     [`microsoft.windowsdesktop.app.runtime.${runtimeIdentifier}`, desktopVersion]
 ];
+// Include licenses for the actual bundled managed transitive dependencies too.
+const dependencyGraph = JSON.parse(fs.readFileSync(path.join(publish, 'STEVANplejer.deps.json'), 'utf8'));
+const target = dependencyGraph.targets[dependencyGraph.runtimeTarget.name];
+if (!target) throw new Error('Published application dependency target is missing.');
+for (const [name, item] of Object.entries(target)) {
+    if (dependencyGraph.libraries[name]?.type !== 'package'
+        || !['runtime', 'native', 'runtimeTargets', 'resources'].some(kind => Object.keys(item[kind] || {}).length)) continue;
+    const separator = name.lastIndexOf('/');
+    const id = name.slice(0, separator).toLowerCase();
+    const version = name.slice(separator + 1);
+    if (!packages.some(([existing]) => existing === id)) packages.push([id, version]);
+}
 function walk(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
         const full = path.join(directory, entry.name);
@@ -104,7 +157,11 @@ for (const [id, pinned] of packages) {
     }
     const nuspec = path.join(directory, `${id}.nuspec`);
     if (fs.existsSync(nuspec)) fs.copyFileSync(nuspec, path.join(notices, `${id}-${version}`, `${id}.nuspec`));
-    inventory.push({ package: id, version, licenseDocuments: documents.map(file => path.relative(directory, file).replaceAll(path.sep, '/')) });
+    const metadata = fs.existsSync(nuspec) ? fs.readFileSync(nuspec, 'utf8') : '';
+    const license = /<license\s+type="([^"]+)"[^>]*>([^<]+)<\/license>/i.exec(metadata);
+    inventory.push({ package: id, version,
+        license: license ? { type: license[1], value: license[2] } : null,
+        licenseDocuments: documents.map(file => path.relative(directory, file).replaceAll(path.sep, '/')) });
 }
 fs.writeFileSync(path.join(notices, 'bundled-package-inventory.json'), JSON.stringify(inventory, null, 2) + '\n');
 
