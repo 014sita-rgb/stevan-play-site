@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="sr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b515c"><title>СТЕВАН ПРЕТРАЖИВАЧ — STEVAN Play</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf5f7;color:#142e37;font:18px/1.55 system-ui,"Segoe UI",Arial,sans-serif}
+main{max-width:800px;margin:auto;padding:22px 17px 48px}header{background:linear-gradient(130deg,#122f48,#0e7471);color:white;padding:30px;border-radius:17px}h1{font-size:clamp(28px,5vw,43px);line-height:1.2;margin:0 0 12px}
+section{border:1px solid #ccdadf;border-radius:13px;background:white;padding:21px;margin:18px 0}h2{margin:0 0 12px;font-size:23px}
+a{color:#006a73}a:focus-visible{outline:4px solid orange;outline-offset:4px}
+#download{display:inline-block;background:#626f79;color:white;padding:14px 18px;border-radius:10px;font-weight:700;text-decoration:none}
+#download.ready{background:#08746b}p.small{font-size:14px;overflow-wrap:anywhere}
+@media(prefers-color-scheme:dark){body{background:#101d26;color:#f3fafb}section{background:#1b3540;border-color:#52707c}a{color:#8fe8e7}}
+</style></head><body><main>
+<header><h1>СТЕВАН ПРЕТРАЖИВАЧ</h1><p>Локална претрага Ваљева, Лајковца, Љига, Мионице, Осечине и Уба — питајте нормалним српским језиком.</p><strong>Windows 10 / 11 · заједничка серверска база</strong></header>
+<section><h2>Преузимање за Windows</h2><p id="status" role="status" aria-live="polite">Проверавам доступност инсталера…</p>
+<a id="download" aria-disabled="true" tabindex="-1">Преузми за Windows</a>
+<p id="version" class="small"></p><p id="hash" class="small"></p></section>
+<section><h2>Како ради?</h2><p>Укуцајте „Молери Ваљево“, „Фризери Лајковац“ или „Хотели Уб“ и добијте податке са изворима. Списак није службени попис свих активних радњи.</p>
+<p>Нове информације стижу са заједничке Cloudflare базе. Ажурирање самог програма тражи вашу потврду.</p></section>
+<section><h2>Безбедност</h2><p>Инсталер се објављује тек када је доступан стварни тестирани EXE. SHA-256 штити од случајних оштећења, али не замењује дигитални потпис произвођача.</p>
+<p id="signature" class="small"></p></section><footer><a href="../">← Назад на STEVAN Play</a></footer>
+</main><script>
+(async()=>{
+const status=document.getElementById('status'),link=document.getElementById('download');
+try{
+const res=await fetch('./update.json',{cache:'no-store'});if(!res.ok)throw Error('manifest nije objavljen');const m=await res.json();
+if(m.app_id!=='rs.stevan.pretrazivac.windows'||!/^\d+\.\d+\.\d+$/.test(m.version)||!/^https:\/\/014sita-rgb\.github\.io\/stevan-play-site\/stevan-pretrazivac\/STEVAN_Pretrazivac_Setup_\d+_\d+_\d+\.exe$/.test(m.download_url)||! /^[a-f0-9]{64}$/i.test(m.setup_sha256||''))throw Error('nevalidan manifest');
+const file=await fetch(m.download_url,{method:'HEAD',cache:'no-store'});if(!file.ok)throw Error('EXE nije objavljen');
+link.setAttribute('href',m.download_url);link.setAttribute('download','');link.removeAttribute('aria-disabled');link.removeAttribute('tabindex');link.classList.add('ready');
+status.textContent='Инсталер је доступан.';document.getElementById('version').textContent='Верзија: '+m.version;
+document.getElementById('hash').textContent='SHA-256: '+m.setup_sha256;document.getElementById('signature').textContent=m.signed===true?'Производ је означен као потписан — проверите потпис у Windows-у.':'Дигитални потпис инсталера није потврђен.';
+}catch(_){status.textContent='Инсталер је у припреми: још нема проверене датотеке за јавно преузимање.';}
+})();
+</script></body></html>
