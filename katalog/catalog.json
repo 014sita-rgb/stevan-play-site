@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 6,
+  "catalogVersion": 7,
   "updated": "2026-10-23",
   "apps": [
     {
@@ -30,6 +30,22 @@
       "versionCode": 9,
       "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/Majstori%20Lajkovac.apk",
       "sha256": "15d5333551911ba7b133105e66cfdfe8aad38001632572da86274c16db7ca6e2",
+      "access": "public",
+      "enabled": true
+    },
+    {
+      "id": "stevan-pretrazivac-javni",
+      "name": "СТЕВАН ПРЕТРАЖИВАЧ",
+      "type": "apk",
+      "platform": "android",
+      "category": "Претрага и информације",
+      "description": "Јавно издање за Ваљево и Колубарски округ. Сваки корисник отвара сопствену пошту; власникова СТЕВАН ПОШТА није укључена.",
+      "packageName": "rs.stevan.pretrazivac.javni",
+      "versionName": "1.0.0",
+      "versionCode": 1,
+      "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/aplikacije/stevan-pretrazivac-javni/STEVAN_Pretrazivac_JAVNI_1_0_0.apk",
+      "sha256": "f9d843df3e90ba171bc3f7222cba8f7c1797a9cc0b935169a5aa73533e0ac163",
+      "signerSha256": "8cbcd0c202d7d35ffda188fd0a73c1a0b87848baca359994e98ce0a6130b2ecc",
       "access": "public",
       "enabled": true
     }
