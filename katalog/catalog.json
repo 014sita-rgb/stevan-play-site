@@ -1,35 +1,49 @@
 {
-    "catalogVersion":  5,
-    "updated":  "2026-10-04",
-    "apps":  [
-                 {
-                     "id":  "imperijal-014",
-                     "name":  "IMPERIJAL 014",
-                     "platform":  "android",
-                     "category":  "Usluge",
-                     "description":  "Aplikacija salona IMPERIJAL 014.",
-                     "packageName":  "rs.imperijal014.salon.direct",
-                     "versionName":  "1.3.3-direct",
-                     "versionCode":  13,
-                     "apkUrl":  "https://014sita-rgb.github.io/stevan-play-site/aplikacije/imperijal-014/imperijal-014_13.apk",
-                     "sha256":  "f158ade3131593b1b8dbaecabf0c4241fd5dc7c9c60ec1ea059941f086524664",
-                     "access":  "public",
-                     "enabled":  true,
-                     "signerSha256":  "beb4ca91afcb90a615dc82ad2a1a5cbc9884283a9cd12681390ee1320f197063"
-                 },
-                 {
-                     "id":  "majstori-lajkovac",
-                     "name":  "Majstori Lajkovac",
-                     "platform":  "android",
-                     "category":  "Usluge",
-                     "description":  "Majstori i usluge u Lajkovcu.",
-                     "packageName":  "rs.lajkovac.majstori",
-                     "versionName":  "1.3.1",
-                     "versionCode":  9,
-                     "apkUrl":  "https://014sita-rgb.github.io/stevan-play-site/Majstori%20Lajkovac.apk",
-                     "sha256":  "15d5333551911ba7b133105e66cfdfe8aad38001632572da86274c16db7ca6e2",
-                     "access":  "public",
-                     "enabled":  true
-                 }
-             ]
+  "catalogVersion": 6,
+  "updated": "2026-10-23",
+  "apps": [
+    {
+      "id": "imperijal-014",
+      "name": "IMPERIJAL 014",
+      "platform": "android",
+      "category": "Usluge",
+      "description": "Aplikacija salona IMPERIJAL 014.",
+      "packageName": "rs.imperijal014.salon.direct",
+      "versionName": "1.3.3-direct",
+      "versionCode": 13,
+      "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/aplikacije/imperijal-014/imperijal-014_13.apk",
+      "sha256": "f158ade3131593b1b8dbaecabf0c4241fd5dc7c9c60ec1ea059941f086524664",
+      "access": "public",
+      "enabled": true,
+      "signerSha256": "beb4ca91afcb90a615dc82ad2a1a5cbc9884283a9cd12681390ee1320f197063"
+    },
+    {
+      "id": "majstori-lajkovac",
+      "name": "Majstori Lajkovac",
+      "platform": "android",
+      "category": "Usluge",
+      "description": "Majstori i usluge u Lajkovcu.",
+      "packageName": "rs.lajkovac.majstori",
+      "versionName": "1.3.1",
+      "versionCode": 9,
+      "apkUrl": "https://014sita-rgb.github.io/stevan-play-site/Majstori%20Lajkovac.apk",
+      "sha256": "15d5333551911ba7b133105e66cfdfe8aad38001632572da86274c16db7ca6e2",
+      "access": "public",
+      "enabled": true
+    }
+  ],
+  "webApps": [
+    {
+      "id": "stevan-pretrazivac-web",
+      "name": "СТЕВАН ПРЕТРАЖИВАЧ",
+      "type": "web",
+      "platform": "web",
+      "category": "Претрага, вести и јавне услуге",
+      "description": "Претрага, Жуте странице, вести, биоскопи и јавне установе свих шест општина Колубарског округа.",
+      "webUrl": "https://stevan-kolubara-index.014sita.workers.dev/",
+      "installMethod": "pwa",
+      "access": "public",
+      "enabled": true
+    }
+  ]
 }
