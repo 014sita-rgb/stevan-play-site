@@ -1,0 +1,24 @@
+name: STEVAN Play APK signing and integrity guard
+on:
+  push:
+    paths:
+      - "katalog/catalog.json"
+      - "**/*.apk"
+      - "tools/stevan_release_guard.py"
+      - ".github/workflows/stevan-release-guard.yml"
+  pull_request:
+    paths:
+      - "katalog/catalog.json"
+      - "**/*.apk"
+      - "tools/stevan_release_guard.py"
+      - ".github/workflows/stevan-release-guard.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-apks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify catalog APK hashes, package IDs, version and original signer
+        run: python3 tools/stevan_release_guard.py
