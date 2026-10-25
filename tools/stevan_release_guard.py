@@ -30,7 +30,7 @@ def signing_cert_sha256(apk):
     """Extract first signer certificate from APK v2/v3 signing block."""
     import struct
     b = apk.read_bytes()
-    eocd = b.rfind(b"PK\\x05\\x06", max(0, len(b) - 65557))
+    eocd = b.rfind(b"PK\x05\x06", max(0, len(b) - 65557))
     if eocd < 0:
         raise RuntimeError("No ZIP central directory")
     cd = struct.unpack_from("<I", b, eocd+16)[0]
