@@ -25,6 +25,42 @@ def run(args):
         raise RuntimeError("Command failed: " + " ".join(args) + "\n" + result.stdout)
     return result.stdout
 
+
+def signing_cert_sha256(apk):
+    """Extract first signer certificate from APK v2/v3 signing block."""
+    import struct
+    b = apk.read_bytes()
+    eocd = b.rfind(b"PK\\x05\\x06", max(0, len(b) - 65557))
+    if eocd < 0:
+        raise RuntimeError("No ZIP central directory")
+    cd = struct.unpack_from("<I", b, eocd+16)[0]
+    if b[cd-16:cd] != b"APK Sig Block 42":
+        raise RuntimeError("APK lacks v2/v3 signing block")
+    size = struct.unpack_from("<Q", b, cd-24)[0]
+    pos = cd - size
+    end = cd - 24
+    def blob(data):
+        if len(data) < 4:
+            raise RuntimeError("Invalid APK signing record")
+        n = struct.unpack_from("<I", data, 0)[0]
+        if n+4 > len(data):
+            raise RuntimeError("Invalid signed-data length")
+        return data[4:4+n], data[4+n:]
+    while pos < end:
+        n = struct.unpack_from("<Q", b, pos)[0]
+        marker = struct.unpack_from("<I", b, pos+8)[0]
+        if marker in (0x7109871a, 0xf05368c0, 0x1b93ad61):
+            data = memoryview(b)[pos+12:pos+8+n]
+            signers, _ = blob(data)
+            first, _ = blob(signers)
+            signed, _ = blob(first)
+            _, rem = blob(signed)
+            certificates, _ = blob(rem)
+            first_cert, _ = blob(certificates)
+            return hashlib.sha256(first_cert).hexdigest()
+        pos += 8+n
+    raise RuntimeError("No v2/v3 signer certificate")
+
 def check(app):
     apk_url = urlparse(app["apkUrl"])
     if apk_url.scheme != "https" or apk_url.netloc != HOST or not apk_url.path.startswith(PREFIX):
@@ -44,11 +80,9 @@ def check(app):
     actual_hash = hashlib.sha256(apk.read_bytes()).hexdigest()
     if actual_hash != app.get("sha256", "").lower():
         raise RuntimeError("APK SHA-256 mismatch with catalog")
-    sig = run([tool("apksigner"), "verify", "--print-certs", str(apk)])
-    signer = re.search(r"Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", sig)
-    if not signer:
-        raise RuntimeError("APK signer not readable")
-    if signer.group(1).replace(":", "").lower() != expected_signer:
+    run([tool("apksigner"), "verify", "--print-certs", str(apk)])
+    signer = signing_cert_sha256(apk)
+    if signer.lower() != expected_signer:
         raise RuntimeError("INCOMPATIBLE APK SIGNER, cannot update existing install")
     badge = run([tool("aapt"), "dump", "badging", str(apk)])
     m = re.search(r"^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badge, re.M)
